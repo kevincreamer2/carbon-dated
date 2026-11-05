@@ -2348,7 +2348,7 @@ const PAIR_BANK = [
 ];
 const PAIR_RESTORE = 8; // stability won back for a matched pair, on top of the usual bonus
 
-const TRENCH_START = '2026-11-06';
+const TRENCH_START = '2026-11-05';
 const TRENCH_NAMES = { strata: 'Strata', intrusive: 'Intrusive find', forgery: 'Forgery', pair: 'Pick the pair' };
 // A day's five trenches: two Strata and one of each other kind, with a Strata somewhere in rounds 1–3
 // so the hidden artefact always has a trench to hide in
@@ -2561,8 +2561,8 @@ const PIN_BANK = [
 ];
 
 // ---- SURVEY FORMATS ----
-// From 6 Nov 2026 each survey is two percentages, two Carbon date it and one Pinpoint, in a mixed order.
-const FORMAT_START = '2026-11-06';
+// From 5 Nov 2026 each survey is two percentages, two Carbon date it and one Pinpoint, in a mixed order.
+const FORMAT_START = '2026-11-05';
 const FORMAT_NAMES = { pct: 'Percentage', date: 'Carbon date it', pin: 'Pinpoint' };
 const FORMAT_BANKS = { pct: RATIO_BANK, date: DATE_BANK, pin: PIN_BANK };
 const FORMAT_KEYS = { pct: 'ratio', date: 'date', pin: 'pin' };
@@ -2854,7 +2854,7 @@ function buildPuzzle(practiceKey, noForger) {
     ratioQs = shuffle(surveyQs, rng).slice(0, 5);
   }
 
-  STORAGE_KEY = isPractice ? 'stackle3_practice' : 'stackle3_' + dateStr;
+  STORAGE_KEY = isPractice ? 'stackle3_practice' : 'stackle3_' + dateStr + digRev(dateStr);
   applySitePalette();
 }
 
@@ -2875,7 +2875,9 @@ let state = {
 // Runtime only — not persisted to localStorage
 let lastPulledBlocks = [];
 
-let STORAGE_KEY = 'stackle3_' + dateStr;
+// 5 Nov 2026 switched to the new formats mid-day, so progress saved on the old version is set aside
+function digRev(k) { return k === '2026-11-05' ? '-r2' : ''; }
+let STORAGE_KEY = 'stackle3_' + dateStr + digRev(dateStr);
 function saveState() { if (isPractice) return; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {} }
 function loadState() { try { const s = localStorage.getItem(STORAGE_KEY); if (s) { state = JSON.parse(s); return true; } } catch(e) {} return false; }
 
