@@ -3325,7 +3325,7 @@ function renderStackItems() {
 const TRENCH_COPY = {
   strata: { q: 'Catalogue these finds', prompt: sq => sq.prompt, hint: 'Drag to move, or tap two finds to swap them', need: 0 },
   intrusive: { q: 'Spot the intrusive find', prompt: sq => `${sq.prompt} — except one`, hint: 'Tap the find that doesn’t belong, then lock in', need: 1 },
-  forgery: { q: 'Spot the forged label', prompt: sq => `${sq.prompt}: two labels are genuine`, hint: 'Tap the forged label, then lock in', need: 1 },
+  forgery: { q: 'Spot the forged label', prompt: sq => `${sq.prompt}: one of these labels is forged`, hint: 'Tap the forged label, then lock in', need: 1 },
   pair: { q: 'Pick the pair', prompt: sq => sq.prompt, hint: 'Tap the two finds that belong together, then lock in', need: 2 },
 };
 function renderPickItems() {
