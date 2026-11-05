@@ -21,7 +21,6 @@
   --success: #3E6F62; --success-glass: rgba(62,111,98,0.1);
   --warn: #A9781C; --warn-glass: rgba(169,120,28,0.1);
   --miss: #A2543A; --miss-glass: rgba(162,84,58,0.1);
-  --bearing: #8C5C32;
   --gold: #D4A13A; --gold-d: #A9781C;
   --capstone: #A9C7BB; --clay: #C49A76; --urn: #A86C52; --mudbrick: #DCC3A0; --ink: #23302C;
   --display: 'Cinzel', Georgia, 'Times New Roman', serif;
@@ -31,7 +30,6 @@
   --coin: radial-gradient(circle, transparent 0 32%, rgba(120,80,20,0.6) 32% 40%, transparent 40%), radial-gradient(circle at 35% 30%, #FFF1C8, #E2B24E 50%, #9A6A1C);
   --crack1: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 18' preserveAspectRatio='none'%3E%3Cpath d='M11 -1 L14 6 L11 10 L15 19' fill='none' stroke='%2323302C' stroke-width='1.6'/%3E%3C/svg%3E");
   --crack2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 18' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%2323302C' stroke-width='1.5'%3E%3Cpath d='M6 -1 L9 7 L7 11 L10 19'/%3E%3Cpath d='M18 -1 L16 6 L19 11 L17 19'/%3E%3C/g%3E%3C/svg%3E");
-  --timber: linear-gradient(#5E3B1E 0 2px, transparent 2px calc(100% - 2px), #5E3B1E calc(100% - 2px)), repeating-linear-gradient(90deg, #8C5C32 0 1px, #A8743F 1px 3px, #9A683A 3px 4px);
   color-scheme: light;
 }
 /* Single light look by choice: the dig is an open, sunlit pit in every system theme. */
@@ -406,7 +404,6 @@ input[type="range"]::-moz-range-thumb {
 .pk.missing .fill,.pk.missing .fill *,.pk.missing>div,.pk.missing>div *{background:transparent !important;border-color:#5C6A63 !important;border-style:dotted !important;box-shadow:none !important;clip-path:none !important;filter:none !important}
 .pk.missing .fill::before,.pk.missing .fill::after{display:none}
 .pk.missing.k-tri{opacity:0}
-.brace{position:absolute;inset:-2px;pointer-events:none;background:linear-gradient(90deg,transparent 42%,#5E3B1E 42% 45%,#9A683A 45% 55%,#5E3B1E 55% 58%,transparent 58%),linear-gradient(transparent 38%,#5E3B1E 38% 44%,#A8743F 44% 56%,#5E3B1E 56% 62%,transparent 62%);animation:propSet .48s cubic-bezier(.3,1.3,.5,1)}
 .band.fresh .pk{animation:brushIn .9s ease-out}
 .puff{position:absolute;left:10px;right:10px;top:-16px;height:26px;pointer-events:none;background:radial-gradient(circle,rgba(201,175,136,0.95) 0 3px,transparent 4px) 0 0/14px 12px;animation:puff 1.1s ease-out forwards}
 .site.collapsed .pk:not(.pulled):not(.pulling):not(.missing){animation:tumble 1.1s cubic-bezier(.45,0,.85,.55) forwards;animation-delay:var(--delay,0s)}
@@ -431,7 +428,7 @@ input[type="range"]::-moz-range-thumb {
 .fr-layers .lr span:nth-child(2){flex:1;min-width:0}
 .fr-layers .lr b{font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.06em}
 .site-line{font-size:0.9rem;font-weight:600;color:var(--fg-muted)}
-@media (prefers-reduced-motion: reduce){.band.fresh .pk,.puff,.site.collapsed .site-dust,.brace{animation:none !important}.pk.pulling{animation:none !important;opacity:0}.site.collapsed .pk:not(.pulled):not(.pulling):not(.missing){animation:none !important;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}.site.collapsed .stamp-c{animation:none !important;opacity:1}}
+@media (prefers-reduced-motion: reduce){.band.fresh .pk,.puff,.site.collapsed .site-dust{animation:none !important}.pk.pulling{animation:none !important;opacity:0}.site.collapsed .pk:not(.pulled):not(.pulling):not(.missing){animation:none !important;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}.site.collapsed .stamp-c{animation:none !important;opacity:1}}
 
 .site-area{width:100%}
 .lg-row .swatch{margin-top:2px}
@@ -598,9 +595,26 @@ input[type="range"]::-moz-range-thumb {
 }
 .stack-item.selected .pos-num { background: var(--gold); color: #fff; }
 .stack-hint { font-size: 0.75rem; color: var(--fg-muted); text-align: center; margin-top: 4px; }
-.feedback-prop { font-size: 0.82rem; font-weight: 600; text-align: center; }
-.feedback-prop.lost { color: var(--miss); }
-.feedback-prop.won { color: var(--success); }
+.feedback-note { font-size: 0.82rem; font-weight: 600; text-align: center; }
+.feedback-note.won { color: var(--success); }
+.stack-hint.warn { color: var(--miss); font-weight: 600; }
+.stack-feedback-item.dim { opacity: 0.55; }
+.stack-feedback-item.dim .result-mark { background: transparent; box-shadow: inset 0 0 0 1.5px var(--glass-border); }
+/* Tap trenches: one tap picks, a second tap on the same find lets it go */
+.pick-item {
+  width: 100%; text-align: left; font-family: var(--body); color: var(--fg); cursor: pointer;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-radius: 10px; padding: 12px 14px; font-size: 0.95rem; font-weight: 600; min-height: 48px;
+  display: flex; align-items: center; gap: 12px;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.pick-item.label { font-weight: 500; line-height: 1.35; }
+.pick-item:active { transform: scale(0.98); }
+.pick-item .item-text { flex: 1; min-width: 0; }
+.pick-dot { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid var(--fg-muted); opacity: 0.7; transition: background 0.15s, border-color 0.15s; }
+.pick-item.selected { border-color: var(--gold-d); background: var(--glass-hover); box-shadow: 0 0 0 2px var(--gold), 0 4px 14px -6px rgba(35,48,44,0.35); }
+.pick-item.selected .pick-dot { background: var(--gold); border-color: var(--gold-d); opacity: 1; box-shadow: inset 0 0 0 3px #fff; }
 .stack-feedback-item .result-icon { font-size: 1.1rem; flex-shrink: 0; }
 .stack-feedback-item .correct-pos { font-size: 0.72rem; color: var(--fg-muted); margin-left: auto; flex-shrink: 0; }
 
@@ -740,34 +754,6 @@ input[type="range"]::-moz-range-thumb {
   color: var(--fg-muted); text-align: center; opacity: 0.7; line-height: 1.5;
 }
 
-/* Lives display */
-.lives-row {
-  display: flex; align-items: center; gap: 6px;
-}
-/* Timber props: short shoring posts with dark end grain */
-.life-icon {
-  font-size: 0; display: inline-block; width: 8px; height: 20px; border-radius: 1.5px;
-  background: var(--timber); box-shadow: 0 0 0 1.5px var(--ink);
-  transform: rotate(8deg);
-  transition: transform 0.3s, opacity 0.3s;
-}
-/* Splintered prop: empty dashed outline with a break notch */
-.life-icon.lost {
-  opacity: 1; transform: rotate(8deg); background: transparent; box-shadow: none;
-  outline: 1.5px dashed var(--fg-muted); outline-offset: -1.5px;
-  clip-path: polygon(0 0, 100% 0, 100% 40%, 35% 52%, 100% 62%, 100% 100%, 0 100%);
-}
-.life-icon.breaking {
-  animation: lifeLost 0.5s cubic-bezier(0.4,0,0.2,1) forwards;
-}
-/* Prop takes the load, bows, then snaps */
-@keyframes lifeLost {
-  0% { transform: rotate(8deg); }
-  30% { transform: rotate(8deg) translateY(2px) scaleY(0.9); }
-  55% { transform: rotate(-16deg) translateY(4px); filter: brightness(1.3); }
-  100% { transform: rotate(8deg); opacity: 0.4; }
-}
-
 /* Game over overlay */
 .game-over-overlay {
   position: fixed; inset: 0; z-index: 100;
@@ -893,22 +879,6 @@ input[type="range"]::-moz-range-thumb {
   background: transparent; border: 1px dashed var(--glass-border); opacity: 0.7;
   width: 26px; height: 18px; box-shadow: none; clip-path: none;
 }
-/* Shored up: a timber post and waling braced across the block */
-.jenga-block.bearing-save {
-  background:
-    linear-gradient(90deg, transparent 40%, #5E3B1E 40% 43%, #9A683A 43% 57%, #5E3B1E 57% 60%, transparent 60%),
-    linear-gradient(transparent 32%, #5E3B1E 32% 38%, #A8743F 38% 62%, #5E3B1E 62% 68%, transparent 68%),
-    var(--clay);
-  border: 1.5px solid var(--ink);
-  animation: propSet 0.48s cubic-bezier(0.3,1.3,0.5,1);
-}
-/* Prop slides in from the side and wedges tight */
-@keyframes propSet {
-  0% { transform: translateX(-22px); opacity: 0; }
-  70% { transform: translateX(2px); opacity: 1; }
-  100% { transform: none; }
-}
-
 /* Row lowers in from the light above and brightens as it lands */
 @keyframes rowBuild {
   0% { opacity: 0; transform: translateY(-28px); filter: brightness(1.3); }
@@ -959,22 +929,6 @@ input[type="range"]::-moz-range-thumb {
 .stability-pct {
   font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.78rem; font-weight: 700;
   min-width: 36px; text-align: right;
-}
-
-/* Save bearing button */
-.btn-save {
-  background: linear-gradient(#A8743F, #8C5C32); color: #FFF8EC; border: 1.5px solid #5E3B1E; font-size: 0.92rem; font-weight: 700;
-  padding: 10px 28px; border-radius: 50px;
-  transition: opacity 0.15s, transform 0.15s;
-  box-shadow: 0 3px 14px rgba(196,148,44,0.25);
-}
-.btn-save:active { opacity: 0.85; transform: scale(0.97); }
-.btn-save.urgent {
-  animation: savePulse 1s ease infinite;
-}
-@keyframes savePulse {
-  0%, 100% { box-shadow: 0 3px 14px rgba(196,148,44,0.25); }
-  50% { box-shadow: 0 3px 24px rgba(196,148,44,0.5); }
 }
 
 /* Tower status in results */
@@ -1032,7 +986,7 @@ input[type="range"]::-moz-range-thumb {
 
 @media (prefers-reduced-motion: reduce) {
   *, .strata-drift-1, .strata-drift-2 { animation: none !important; transition-duration: 0s !important; }
-  .jenga-row.building, .jenga-block.bearing-save { animation: calmFade 0.15s ease-out !important; }
+  .jenga-row.building { animation: calmFade 0.15s ease-out !important; }
   .jenga-block.removing { animation: calmFade 0.2s ease-out reverse forwards !important; }
   .jenga.collapsed .jenga-row { animation: calmFade 0.5s ease-out reverse forwards !important; }
   .question-card, .feedback { animation: none !important; }
@@ -1081,8 +1035,8 @@ input[type="range"]::-moz-range-thumb {
   <div class="tagline">Survey, then excavate. Ten rounds to uncover today's ancient site, and keep it standing.</div>
   <div class="how-to glass">
     <div class="how-row"><div class="how-icon">🎯</div><div><strong>Survey (rounds 1–5)</strong><br>Five quick guesses: two percentages, two <em>Carbon date it</em> years and one <em>Pinpoint</em> on a line. Each answer brushes away a layer of the mound. The closer you are, the better the ruin underneath has survived.</div></div>
-    <div class="how-row"><div class="how-icon">⛏</div><div><strong>Excavate (rounds 6–10)</strong><br>Put five finds in order — drag, or tap two to swap. Exact scores full points, one place off scores half. Finds further out knock pieces out of the ruin; at 0% stability it caves in.</div></div>
-    <div class="how-row"><div class="how-icon">🔥</div><div><strong>The torch</strong><br>You get 20 seconds for each survey question and 60 for each excavation round. When the torch burns out, whatever you've set is locked in.</div></div>
+    <div class="how-row"><div class="how-icon">⛏</div><div><strong>Excavate (rounds 6–10)</strong><br>Five trenches. Two are <em>Strata</em>: put five finds in order — drag, or tap two to swap. The others are an <em>Intrusive find</em> (spot the one that doesn't belong), a <em>Forgery</em> (spot the fake label) and <em>Pick the pair</em> (tap the two that share a link — a match steadies the site). Mistakes knock pieces out of the ruin; at 0% stability it caves in.</div></div>
+    <div class="how-row"><div class="how-icon">🔥</div><div><strong>The torch</strong><br>You get 20 seconds for each survey question, 60 for a Strata trench and 30 for the others. When the torch burns out, whatever you've set is locked in.</div></div>
   </div>
   <button class="btn-play" id="btn-start">Play</button>
   <button class="btn-link btn-museum" id="btn-museum-open">Visit the museum</button>
@@ -1100,7 +1054,6 @@ input[type="range"]::-moz-range-thumb {
   <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
     <div class="phase-label" id="phase-label"></div>
     <div style="display:flex; align-items:center; gap:12px;">
-      <div class="lives-row" id="lives-row"></div>
       <div class="round-count" id="round-count"></div>
     </div>
   </div>
@@ -1139,7 +1092,7 @@ input[type="range"]::-moz-range-thumb {
     <div id="stack-ui" hidden style="width:100%;">
       <div class="stack-prompt" id="stack-prompt"></div>
       <div class="stack-items" id="stack-items"></div>
-      <div class="stack-hint">Drag to move, or tap two finds to swap them</div>
+      <div class="stack-hint" id="stack-hint" aria-live="polite">Drag to move, or tap two finds to swap them</div>
     </div>
   </div>
 
@@ -1148,11 +1101,10 @@ input[type="range"]::-moz-range-thumb {
   <div class="feedback" id="feedback-area" hidden>
     <div class="feedback-score" id="feedback-score"></div>
     <div class="feedback-detail" id="feedback-detail"></div>
-    <div class="feedback-prop" id="feedback-prop" hidden></div>
+    <div class="feedback-note" id="feedback-note" hidden></div>
     <div class="feedback-layer" id="feedback-layer" hidden></div>
     <div id="feedback-visual" style="width:100%;"></div>
     <div class="feedback-fact" id="feedback-fact" hidden></div>
-    <button class="btn-save" id="btn-save" hidden>🪵 Shore Up</button>
     <button class="btn-next" id="btn-next">Next</button>
   </div>
 </div>
@@ -1288,7 +1240,7 @@ input[type="range"]::-moz-range-thumb {
 <!-- Game Over Overlay -->
 <div class="game-over-overlay" id="game-over-overlay">
   <div class="game-over-card">
-    <div class="game-over-icon" id="game-over-icon">🪵</div>
+    <div class="game-over-icon" id="game-over-icon">⛏</div>
     <div class="game-over-title" id="game-over-title">Dig Failed</div>
     <div class="game-over-sub" id="game-over-sub">The site has become unstable. The dig ends here.</div>
     <button class="btn-see-results" id="btn-see-results">View Field Notes</button>
@@ -2243,6 +2195,116 @@ const ARTEFACTS = {
   circle: ['an antler pick', 'a flint arrowhead', 'an amber bead', 'a bronze axe head', 'a carved chalk drum'],
 };
 
+// ---- TRENCH TYPES ----
+// From TRENCH_START each excavation runs two Strata trenches (put five finds in order) plus one each of
+// Intrusive find, Forgery and Pick the pair, in a different order every day. Each new bank walks its whole
+// list before anything repeats, so add to the end freely.
+
+// INTRUSIVE FIND: five finds from one layer; one doesn't belong.
+// Tuning: the outlier has to be plausible. Same era, same region, same kind of thing — the kind of slip
+// people actually make (Maiden Castle beats Stonehenge in a Roman layer). If it's obvious at a glance, swap it.
+const INTRUSIVE_BANK = [
+  { c: 'history', prompt: "Built by the Romans", items: ["Colosseum", "Pantheon", "Hadrian's Wall", "Pont du Gard", "Maiden Castle"], odd: "Maiden Castle", f: "Maiden Castle in Dorset is an Iron Age hillfort, centuries older. The Romans attacked it rather than built it." },
+  { c: 'history', prompt: "Tudor monarchs", items: ["Henry VII", "Edward VI", "Mary I", "Elizabeth I", "James I"], odd: "James I", f: "James I was the first Stuart king of England, taking over when Elizabeth I died childless in 1603." },
+  { c: 'world', prompt: "Landlocked countries", items: ["Austria", "Hungary", "Bolivia", "Paraguay", "Slovenia"], odd: "Slovenia", f: "Slovenia has a short stretch of Adriatic coast, under 50km long." },
+  { c: 'world', prompt: "Capital cities", items: ["Canberra", "Ottawa", "Bern", "Brasília", "Istanbul"], odd: "Istanbul", f: "Istanbul is Turkey's biggest city, but the capital has been Ankara since 1923." },
+  { c: 'science', prompt: "Mammals", items: ["Bat", "Dolphin", "Platypus", "Pangolin", "Ichthyosaur"], odd: "Ichthyosaur", f: "Ichthyosaurs looked a lot like dolphins, but they were marine reptiles from the age of the dinosaurs." },
+  { c: 'science', prompt: "Noble gases", items: ["Helium", "Neon", "Argon", "Krypton", "Nitrogen"], odd: "Nitrogen", f: "Nitrogen makes up most of the air but isn't a noble gas. The rest of the family is xenon, radon and oganesson." },
+  { c: 'science', prompt: "Planets with rings", items: ["Saturn", "Jupiter", "Uranus", "Neptune", "Mars"], odd: "Mars", f: "All four giant planets have rings. Mars has none, though its moon Phobos may one day break up into one." },
+  { c: 'tech', prompt: "Danish brands", items: ["Lego", "Pandora", "Carlsberg", "Maersk", "Nokia"], odd: "Nokia", f: "Nokia is Finnish. It started out in 1865 as a paper mill." },
+  { c: 'tech', prompt: "Japanese companies", items: ["Sony", "Nintendo", "Toyota", "Canon", "Samsung"], odd: "Samsung", f: "Samsung is South Korean. It began in 1938 selling dried fish and noodles." },
+  { c: 'art', prompt: "Painted by Vincent van Gogh", items: ["The Starry Night", "Sunflowers", "The Potato Eaters", "Wheatfield with Crows", "The Card Players"], odd: "The Card Players", f: "The Card Players is by Paul Cézanne. One version sold for a reported $250 million in 2011." },
+  { c: 'music', prompt: "Albums by the Beatles", items: ["Revolver", "Abbey Road", "Rubber Soul", "Help!", "Pet Sounds"], odd: "Pet Sounds", f: "Pet Sounds is by the Beach Boys. Paul McCartney has called it a big influence on Sgt. Pepper." },
+  { c: 'film', prompt: "Directed by Steven Spielberg", items: ["Jaws", "E.T.", "Jurassic Park", "Schindler's List", "Back to the Future"], odd: "Back to the Future", f: "Back to the Future was directed by Robert Zemeckis. Spielberg was an executive producer." },
+  { c: 'tv', prompt: "Actors who have played the Doctor", items: ["Christopher Eccleston", "David Tennant", "Matt Smith", "Peter Capaldi", "Benedict Cumberbatch"], odd: "Benedict Cumberbatch", f: "Cumberbatch played Sherlock for Doctor Who's Steven Moffat, but never the Doctor." },
+  { c: 'sport', prompt: "Have won the men's football World Cup", items: ["Brazil", "Germany", "Italy", "Uruguay", "Netherlands"], odd: "Netherlands", f: "The Netherlands have reached three World Cup finals (1974, 1978, 2010) and lost all three." },
+  { c: 'sport', prompt: "Tennis Grand Slams", items: ["Wimbledon", "US Open", "Australian Open", "French Open", "Indian Wells"], odd: "Indian Wells", f: "Indian Wells is one of the biggest events outside the Slams, sometimes nicknamed the fifth Grand Slam." },
+  { c: 'gk', prompt: "Prime numbers", items: ["2", "13", "29", "37", "51"], odd: "51", f: "51 looks prime but is 3 × 17." },
+  { c: 'gk', prompt: "Countries that use the euro", items: ["France", "Ireland", "Croatia", "Finland", "Denmark"], odd: "Denmark", f: "Denmark kept its krone. Croatia switched to the euro in 2023." },
+  { c: 'history', prompt: "Wives of Henry VIII", items: ["Catherine of Aragon", "Anne Boleyn", "Jane Seymour", "Catherine Parr", "Elizabeth Woodville"], odd: "Elizabeth Woodville", f: "Elizabeth Woodville was Edward IV's queen — and Henry VIII's grandmother." },
+  { c: 'world', prompt: "Scottish islands", items: ["Skye", "Mull", "Islay", "Lewis", "Anglesey"], odd: "Anglesey", f: "Anglesey is in Wales, joined to the mainland by Thomas Telford's Menai Bridge." },
+  { c: 'science', prompt: "Fish", items: ["Shark", "Seahorse", "Eel", "Salmon", "Cuttlefish"], odd: "Cuttlefish", f: "Cuttlefish are molluscs, related to squid and octopus. The seahorse really is a fish." },
+  { c: 'tech', prompt: "Programming languages", items: ["Python", "Java", "Rust", "Kotlin", "Linux"], odd: "Linux", f: "Linux is an operating system kernel, written mostly in C." },
+  { c: 'culture', prompt: "Plays by Shakespeare", items: ["Hamlet", "Macbeth", "The Tempest", "Twelfth Night", "The Duchess of Malfi"], odd: "The Duchess of Malfi", f: "The Duchess of Malfi is by John Webster, a contemporary of Shakespeare." },
+  { c: 'music', prompt: "Woodwind instruments", items: ["Flute", "Clarinet", "Oboe", "Saxophone", "Flugelhorn"], odd: "Flugelhorn", f: "The flugelhorn is brass. The saxophone is made of brass but counts as woodwind because it uses a reed." },
+  { c: 'history', prompt: "Seven Wonders of the Ancient World", items: ["Great Pyramid of Giza", "Hanging Gardens of Babylon", "Colossus of Rhodes", "Lighthouse of Alexandria", "Parthenon"], odd: "Parthenon", f: "The Parthenon never made the list. The Great Pyramid is the only ancient wonder still standing." },
+  { c: 'film', prompt: "Pixar films", items: ["Toy Story", "Up", "Ratatouille", "WALL-E", "Shrek"], odd: "Shrek", f: "Shrek was made by DreamWorks, and won the first ever Oscar for Best Animated Feature." },
+  { c: 'world', prompt: "Countries on the equator", items: ["Ecuador", "Colombia", "Kenya", "Indonesia", "Peru"], odd: "Peru", f: "Peru sits just south of the equator, which crosses neighbouring Ecuador and Colombia." },
+];
+
+// FORGERY: three labels on one find; two are genuine, one is forged.
+// Tuning: a good forgery changes one detail of a real fact — a date, a place, a material — rather than
+// inventing something wild. The `f` line corrects the forged label.
+const FORGERY_BANK = [
+  { c: 'history', find: "The Sutton Hoo helmet", real: ["Dug up in Suffolk in 1939", "Buried inside a ship"], fake: "Found in a Viking ship burial", f: "The Sutton Hoo burial is Anglo-Saxon, from the early 600s — well over a century before the first Viking raids." },
+  { c: 'history', find: "The Rosetta Stone", real: ["Found by French soldiers in 1799", "Carries one decree in three scripts"], fake: "In the British Museum since 1902", f: "It has been in the British Museum since 1802, a century earlier." },
+  { c: 'history', find: "Stonehenge", real: ["Its bluestones came from Wales", "Lined up with the midsummer sunrise"], fake: "Its Altar Stone came from Cornwall", f: "A 2024 study traced the Altar Stone to north-east Scotland, over 700km away." },
+  { c: 'history', find: "Magna Carta", real: ["Sealed by King John in 1215", "Agreed at Runnymede"], fake: "Written in English", f: "Magna Carta was written in Latin." },
+  { c: 'history', find: "Tutankhamun's tomb", real: ["Found by Howard Carter's team in 1922", "In the Valley of the Kings"], fake: "Tutankhamun became pharaoh at about 19", f: "He became pharaoh at about nine, and died at about 19." },
+  { c: 'art', find: "The Bayeux Tapestry", real: ["About 70 metres long", "Tells the story of the Norman Conquest"], fake: "Woven on a loom", f: "It isn't really a tapestry. It's embroidered — stitched in wool onto linen." },
+  { c: 'world', find: "Mount Everest", real: ["On the border of Nepal and China", "First climbed in 1953"], fake: "Named after a Welsh mountaineer", f: "George Everest was a Welsh surveyor, not a climber. He never saw the mountain." },
+  { c: 'world', find: "Lake Baikal", real: ["In Siberia", "The world's deepest lake"], fake: "Holds a tenth of the world's fresh surface water", f: "It holds around a fifth of the world's unfrozen fresh surface water — twice that." },
+  { c: 'science', find: "Mercury, the planet", real: ["Closest planet to the Sun", "Has no moons"], fake: "Hottest planet in the Solar System", f: "Venus is hotter, despite being further out, because its thick atmosphere traps the heat." },
+  { c: 'science', find: "The blue whale", real: ["Largest animal known to have lived", "Its heart is about the size of a small car"], fake: "Feeds mainly on small fish", f: "Blue whales feed almost entirely on krill, tiny shrimp-like crustaceans." },
+  { c: 'science', find: "Diamond", real: ["Made of pure carbon", "Scores 10 on the Mohs scale"], fake: "Conducts electricity well", f: "Diamond is an electrical insulator. Graphite, also pure carbon, is the one that conducts." },
+  { c: 'science', find: "Penicillin", real: ["Discovered by Alexander Fleming", "Found at St Mary's Hospital, London"], fake: "Discovered in 1938", f: "Fleming spotted it in 1928. It took until the 1940s to make it in bulk." },
+  { c: 'tech', find: "The first iPhone", real: ["Unveiled by Steve Jobs in 2007", "Launched without an App Store"], fake: "Ran on a 3G network", f: "The original iPhone was 2G only. 3G arrived with the iPhone 3G in 2008." },
+  { c: 'tech', find: "The Penny Black", real: ["The world's first adhesive postage stamp", "Shows Queen Victoria"], fake: "Issued in 1860", f: "It was issued in May 1840." },
+  { c: 'tech', find: "Concorde", real: ["Crossed from London to New York in about 3½ hours", "Built by Britain and France together"], fake: "Retired in 2013", f: "Concorde made its last commercial flights in 2003." },
+  { c: 'sport', find: "Wimbledon", real: ["The oldest tennis tournament in the world", "Played on grass"], fake: "First held in 1897", f: "The first Wimbledon was in 1877, twenty years earlier." },
+  { c: 'sport', find: "The FA Cup", real: ["The oldest national football competition", "The final is usually at Wembley"], fake: "First won by Manchester United", f: "The first winners, in 1872, were Wanderers, a team of former public schoolboys." },
+  { c: 'sport', find: "The Ashes", real: ["Played between England and Australia", "The urn is said to hold a burnt bail"], fake: "First contested in 1982", f: "The Ashes date back to 1882–83, a century earlier." },
+  { c: 'culture', find: "Shakespeare's Globe", real: ["The original was built in 1599", "Burned down in 1613"], fake: "The modern replica opened in 1977", f: "The reconstructed Globe opened in 1997." },
+  { c: 'art', find: "The Mona Lisa", real: ["Painted by Leonardo da Vinci", "Hangs in the Louvre"], fake: "Painted on canvas", f: "It's painted on a panel of poplar wood." },
+  { c: 'music', find: "Abbey Road, the album", real: ["Named after the street its studio is on", "Its cover shows a zebra crossing"], fake: "The last Beatles album to be released", f: "It was the last one they recorded, but Let It Be came out after it, in 1970." },
+  { c: 'film', find: "Jaws (1975)", real: ["Directed by Steven Spielberg", "Based on a novel by Peter Benchley"], fake: "Filmed off the coast of California", f: "It was filmed off Martha's Vineyard, Massachusetts." },
+  { c: 'tv', find: "Coronation Street", real: ["First aired in 1960", "Set in the fictional town of Weatherfield"], fake: "Made by the BBC", f: "Coronation Street is made by Granada for ITV." },
+  { c: 'gk', find: "The Union Flag", real: ["Combines the crosses of three patron saints", "Has nothing representing Wales"], fake: "Took its current form in 1901", f: "Its current form dates from 1801, when Ireland joined the union." },
+  { c: 'world', find: "Big Ben", real: ["Really the name of the great bell", "The bell cracked within months of first ringing"], fake: "Its tower was renamed Victoria Tower in 2012", f: "It became the Elizabeth Tower in 2012. Victoria Tower is the other end of Parliament." },
+  { c: 'history', find: "The Great Fire of London", real: ["Started in a bakery on Pudding Lane", "Broke out in 1666"], fake: "Burned for about two weeks", f: "It burned for about four days." },
+];
+
+// PICK THE PAIR: five finds, exactly two share a hidden link.
+// Tuning: the link should be findable but not shouted — and none of the other three may share it.
+// It's the hardest trench, so getting it right steadies the site (PAIR_RESTORE).
+const PAIR_BANK = [
+  { c: 'tech', items: ["Lego", "Pandora", "Nokia", "Ikea", "Heineken"], pair: ["Lego", "Pandora"], f: "Both are Danish. Ikea is Swedish, Nokia Finnish and Heineken Dutch." },
+  { c: 'science', items: ["Tomato", "Cucumber", "Carrot", "Potato", "Celery"], pair: ["Tomato", "Cucumber"], f: "Both are fruits to a botanist — they grow from the flower and hold the seeds." },
+  { c: 'world', items: ["Canberra", "Brasília", "Sydney", "Rio de Janeiro", "Toronto"], pair: ["Canberra", "Brasília"], f: "Both were built from scratch to be their country's capital." },
+  { c: 'music', items: ["Oasis", "The Smiths", "Blur", "Arctic Monkeys", "Radiohead"], pair: ["Oasis", "The Smiths"], f: "Both are from Manchester. Blur formed in London, Arctic Monkeys in Sheffield, Radiohead in Abingdon." },
+  { c: 'history', items: ["Richard III", "Harold II", "Charles I", "Henry V", "Edward II"], pair: ["Richard III", "Harold II"], f: "Both were killed in battle — Harold at Hastings, Richard at Bosworth." },
+  { c: 'sport', items: ["The Masters", "Wimbledon", "The Open", "Royal Ascot", "The Boat Race"], pair: ["The Masters", "The Open"], f: "Both are golf majors." },
+  { c: 'science', items: ["Venus", "Uranus", "Mars", "Earth", "Jupiter"], pair: ["Venus", "Uranus"], f: "Both spin the opposite way to most planets. On Venus the Sun rises in the west." },
+  { c: 'gk', items: ["Kayak", "Canoe", "Level", "Ladder", "Paddle"], pair: ["Kayak", "Level"], f: "Both are palindromes — the same backwards." },
+  { c: 'film', items: ["Titanic", "Avatar", "Jaws", "Alien", "Gladiator"], pair: ["Titanic", "Avatar"], f: "Both were directed by James Cameron. Alien and Gladiator are Ridley Scott's; Jaws is Spielberg's." },
+  { c: 'art', items: ["Picasso", "Dalí", "Monet", "Renoir", "Rembrandt"], pair: ["Picasso", "Dalí"], f: "Both were Spanish. Monet and Renoir were French, Rembrandt Dutch." },
+  { c: 'world', items: ["Switzerland", "Austria", "Portugal", "Italy", "Greece"], pair: ["Switzerland", "Austria"], f: "Both are landlocked." },
+  { c: 'culture', items: ["Hercule Poirot", "Miss Marple", "Sherlock Holmes", "Inspector Morse", "James Bond"], pair: ["Hercule Poirot", "Miss Marple"], f: "Both were created by Agatha Christie." },
+  { c: 'tech', items: ["Ferrari", "Lamborghini", "Porsche", "Jaguar", "Rolls-Royce"], pair: ["Ferrari", "Lamborghini"], f: "Both are Italian. Lamborghini started out making tractors." },
+  { c: 'science', items: ["Mercury", "Bromine", "Helium", "Iron", "Oxygen"], pair: ["Mercury", "Bromine"], f: "Both are liquid at room temperature — the only two elements that are." },
+  { c: 'history', items: ["Francis Drake", "Walter Raleigh", "Horatio Nelson", "Duke of Wellington", "Oliver Cromwell"], pair: ["Francis Drake", "Walter Raleigh"], f: "Both were adventurers in the service of Elizabeth I." },
+  { c: 'music', items: ["Clarinet", "Saxophone", "Trumpet", "Flute", "Trombone"], pair: ["Clarinet", "Saxophone"], f: "Both are played with a single reed." },
+  { c: 'sport', items: ["Rugby union", "American football", "Hockey", "Netball", "Squash"], pair: ["Rugby union", "American football"], f: "Both are played with an oval ball." },
+  { c: 'gk', items: ["Monday", "Tuesday", "Thursday", "Saturday", "Sunday"], pair: ["Tuesday", "Thursday"], f: "Both are named after Norse gods — Tyr and Thor. Saturday is named after the Roman god Saturn." },
+  { c: 'world', items: ["Mount Fuji", "Mount Etna", "K2", "Matterhorn", "Mont Blanc"], pair: ["Mount Fuji", "Mount Etna"], f: "Both are active volcanoes." },
+  { c: 'film', items: ["Up", "Toy Story", "Frozen", "Moana", "Shrek"], pair: ["Up", "Toy Story"], f: "Both are Pixar films. Frozen and Moana are Walt Disney Animation; Shrek is DreamWorks." },
+  { c: 'history', items: ["Pompeii", "Herculaneum", "Troy", "Babylon", "Carthage"], pair: ["Pompeii", "Herculaneum"], f: "Both were buried by the eruption of Vesuvius in AD 79." },
+  { c: 'tech', items: ["Bitcoin", "Ethereum", "Euro", "Yen", "Rupee"], pair: ["Bitcoin", "Ethereum"], f: "Both are cryptocurrencies." },
+  { c: 'science', items: ["Mercury", "Venus", "Mars", "Jupiter", "Saturn"], pair: ["Mercury", "Venus"], f: "Both have no moons." },
+  { c: 'culture', items: ["Dracula", "The Picture of Dorian Gray", "Frankenstein", "Dr Jekyll and Mr Hyde", "Treasure Island"], pair: ["Dracula", "The Picture of Dorian Gray"], f: "Both were written by Irish authors, Bram Stoker and Oscar Wilde." },
+];
+const PAIR_RESTORE = 8; // stability won back for a matched pair, on top of the usual bonus
+
+const TRENCH_START = '2026-11-06';
+const TRENCH_NAMES = { strata: 'Strata', intrusive: 'Intrusive find', forgery: 'Forgery', pair: 'Pick the pair' };
+// A day's five trenches: two Strata and one of each other kind, with a Strata somewhere in rounds 1–3
+// so the hidden artefact always has a trench to hide in
+function trenchKinds(seedKey) {
+  const k = shuffle(['strata', 'strata', 'intrusive', 'forgery', 'pair'], seededRNG(hashDate('trench-' + seedKey)));
+  if (!k.slice(0, 3).includes('strata')) { const s = k.indexOf('strata'); [k[0], k[s]] = [k[s], k[0]]; }
+  return k;
+}
+
 // ---- DAILY MIX ----
 // Every dig mixes topics by weight. The ruin still changes with the day of the week.
 const CATEGORIES = {
@@ -2506,9 +2568,10 @@ function usageBefore(dayIdx) {
   const used = { s: {}, k: {} };
   for (let i = 0; i < dayIdx; i++) {
     const d = new Date(EPOCH); d.setDate(d.getDate() + i);
-    const m = dayMix(localKey(d));
+    const key = localKey(d), m = dayMix(key);
     m.s.forEach(c => { used.s[c] = (used.s[c] || 0) + 1; });
-    m.k.forEach(c => { used.k[c] = (used.k[c] || 0) + 1; });
+    // Since the trench types arrived only two of the five topics go to Strata trenches
+    (key >= TRENCH_START ? m.k.slice(0, 2) : m.k).forEach(c => { used.k[c] = (used.k[c] || 0) + 1; });
   }
   return used;
 }
@@ -2585,38 +2648,65 @@ function buildPuzzle(practiceKey, noForger) {
     return out;
   };
 
-  // Excavation: today's topics, easiest first
-  let stacks = pickFor(mix.k, catStacks, 'stack', used.k);
-  if (stacks.length < 5) stacks.push(...rotationPick(STACK_BANK, 5 - stacks.length, 'stack-any', dayIndex * 5 + off, new Set(stacks)));
+  // Excavation: two Strata trenches on today's topics plus one each of the other kinds (before
+  // TRENCH_START, five Strata). The hidden artefact can only hide in a Strata trench in rounds 1–3.
+  const kinds = isPractice || dateStr >= TRENCH_START ? trenchKinds(seedKey) : ['strata', 'strata', 'strata', 'strata', 'strata'];
+  const strataSlots = kinds.map((k, i) => k === 'strata' ? i : -1).filter(i => i > -1);
+  const nStrata = strataSlots.length;
+  let stacks = pickFor(nStrata === 5 ? mix.k : mix.k.slice(0, nStrata), catStacks, 'stack', used.k);
+  if (stacks.length < nStrata) stacks.push(...rotationPick(STACK_BANK, nStrata - stacks.length, 'stack-any', dayIndex * nStrata + off, new Set(stacks)));
   stacks.sort((a, b) => (a.d || 2) - (b.d || 2));
   // About one dig in three hides an artefact under a find that never existed — same days for everyone, always in rounds 1–3
   forger = null;
   const fr = seededRNG(hashDate(seedKey + '-forger'));
-  let forgedRound = -1;
+  let forgedStack = -1; // index into stacks
   if (!noForger && fr() < 1 / 3) {
-    let eligible = [0, 1, 2].filter(i => stacks[i] && fakeFor(stacks[i]));
-    if (!eligible.length) {
-      // None of today's early stacks has a fake ready: bring one in for one of rounds 1–3
+    const early = strataSlots.map((r, si) => r <= 2 ? si : -1).filter(si => si > -1);
+    let eligible = early.filter(si => stacks[si] && fakeFor(stacks[si]));
+    if (!eligible.length && early.length) {
+      // None of today's early Strata trenches has a fake ready: bring one in
       const pool = STACK_BANK.filter(q => fakeFor(q) && !stacks.includes(q));
-      if (pool.length && stacks.length >= 3) { const at = Math.floor(fr() * 3); stacks[at] = pool[Math.floor(fr() * pool.length)]; eligible = [at]; }
+      if (pool.length) { const at = early[Math.floor(fr() * early.length)]; stacks[at] = pool[Math.floor(fr() * pool.length)]; eligible = [at]; }
     }
-    if (eligible.length) forgedRound = eligible[Math.floor(fr() * eligible.length)];
+    if (eligible.length) forgedStack = eligible[Math.floor(fr() * eligible.length)];
   }
 
-  stackQs = stacks.map((q, i) => {
+  const strataQs = stacks.map((q, si) => {
     let correct = [...q.items];
-    if (i === forgedRound) {
+    if (si === forgedStack) {
       const fk = fakeFor(q);
       correct = correct.map(it => it === fk.has ? fk.fake : it);
-      forger = { round: i, fake: fk.fake, real: fk.has, why: fk.why, prompt: q.prompt };
+      forger = { round: strataSlots[si], fake: fk.fake, real: fk.has, why: fk.why, prompt: q.prompt };
     }
     let shuffled = shuffle([...correct], rng);
     if (shuffled.every((it, k) => it === correct[k])) shuffled = [...shuffled.slice(1), shuffled[0]];
-    return { prompt: q.prompt, correct, shuffled, f: q.f, c: q.c };
+    return { kind: 'strata', prompt: q.prompt, correct, shuffled, items: correct, f: q.f, c: q.c };
   });
+  // The other trench types each walk their whole bank in order, so nothing repeats until all have been used
+  const tn = isPractice ? 0 : Math.max(0, dayIndex - Math.round((parseKey(TRENCH_START) - EPOCH) / 86400000));
+  const build = {
+    intrusive: () => {
+      const q = rotationPick(INTRUSIVE_BANK, 1, 'intrusive-all', tn + off)[0];
+      const items = shuffle(q.items, rng);
+      return { kind: 'intrusive', prompt: q.prompt, items, answer: [items.indexOf(q.odd)], f: q.f, c: q.c };
+    },
+    forgery: () => {
+      const q = rotationPick(FORGERY_BANK, 1, 'forgery-all', tn + off)[0];
+      const items = shuffle([...q.real, q.fake], rng);
+      return { kind: 'forgery', prompt: q.find, items, answer: [items.indexOf(q.fake)], f: q.f, c: q.c };
+    },
+    pair: () => {
+      const q = rotationPick(PAIR_BANK, 1, 'pair-all', tn + off)[0];
+      const items = shuffle(q.items, rng);
+      return { kind: 'pair', prompt: 'Two of these share a hidden link', items, answer: q.pair.map(p => items.indexOf(p)).sort((a, b) => a - b), f: q.f, c: q.c };
+    },
+  };
+  stackQs = kinds.map(k => k === 'strata' ? strataQs.shift() : build[k]());
   if (forger) {
     // One real suspect from every other round, so the question is one find per round
-    forger.decoys = stackQs.map((sq, i) => i === forger.round ? forger.fake : sq.correct[Math.floor(fr() * sq.correct.length)]);
+    // (the Forgery trench offers its find; the intruder is real too, so it can stand as a suspect)
+    forger.decoys = stackQs.map((sq, i) => i === forger.round ? forger.fake
+      : sq.kind === 'forgery' ? sq.prompt : sq.items[Math.floor(fr() * sq.items.length)]);
     const arts = ARTEFACTS[siteKey()];
     forger.artefact = arts[Math.floor(fr() * arts.length)];
   }
@@ -2668,12 +2758,9 @@ let state = {
   v: 2, fv: 1, forgerResult: null, forgerDeadline: null,
   // Site fields: the condition of each uncovered band, and what has happened to individual pieces
   towerStability: 100,
-  towerBearings: 0,
   siteConds: [],   // per band, top first: 'pristine'|'solid'|'cracked'|'crumbling'
   pieceDmg: {},    // 'band-piece' id -> steps of damage on top of its layer's condition
-  pieceBrace: {},  // 'band-piece' id -> true when a timber prop is holding it
   towerCollapsed: false,
-  stackLives: 3,
 };
 
 // Runtime only — not persisted to localStorage
@@ -2703,35 +2790,8 @@ function renderProgress() {
   }
 }
 
-function renderLives() {
-  $('lives-row').innerHTML = ''; // timber props were removed
-}
-
-function loseLife() {
-  if (state.lives <= 0) return false;
-  state.lives--;
-  // Animate the lost life
-  const icons = $('lives-row').querySelectorAll('.life-icon:not(.lost)');
-  const lastAlive = icons[icons.length - 1];
-  if (lastAlive) {
-    lastAlive.classList.add('breaking');
-    lastAlive.addEventListener('animationend', () => {
-      lastAlive.classList.remove('breaking');
-      lastAlive.classList.add('lost');
-    }, { once: true });
-  }
-  // Screen shake
-  const content = $('content');
-  content.classList.add('shake');
-  content.addEventListener('animationend', () => content.classList.remove('shake'), { once: true });
-
-  // Running out of props no longer ends the dig — you just go into the excavation unshored.
-  return false;
-}
-
 function showGameOver(reason) {
   $('btn-next').hidden = true;
-  $('btn-save').hidden = true;
   const icon = $('game-over-icon');
   const title = $('game-over-title');
   const sub = $('game-over-sub');
@@ -2739,16 +2799,6 @@ function showGameOver(reason) {
     icon.textContent = '⛏';
     title.textContent = 'Cave-In';
     sub.textContent = `${currentSite().name} couldn't hold. Too many pieces knocked out, and it caves in.`;
-  } else if (reason === 'bearings') {
-    if (state.phase === 'estimate') {
-      icon.textContent = '🪵';
-      title.textContent = 'Dig Failed';
-      sub.textContent = "All your props have snapped. The dig ends here.";
-    } else {
-      icon.textContent = '🪵';
-      title.textContent = 'Dig Failed';
-      sub.textContent = "Too many misordered finds. The dig ends here.";
-    }
   } else {
     icon.textContent = '⛏';
     title.textContent = 'Dig Failed';
@@ -2873,10 +2923,9 @@ function effCond(bi, pi) {
 // Saves from before pieces took damage used pieceState; carry them over
 function migratePieces() {
   if (state.pieceDmg) return;
-  state.pieceDmg = {}; state.pieceBrace = {};
+  state.pieceDmg = {};
   Object.entries(state.pieceState || {}).forEach(([id, v]) => {
     if (v === 'pulled' || v === 'missing') state.pieceDmg[id] = 4;
-    if (v === 'shored') state.pieceBrace[id] = true;
   });
 }
 
@@ -2977,10 +3026,6 @@ function renderSite(el, view = {}) {
       let cls = 'pk k-' + p.k + (CHIP_KINDS.includes(p.k) ? ' chip' : '') + ' cond-' + (broken ? 'crumbling broken ' + (pi % 2 ? 'broken-l' : 'broken-r') : ec);
       if (view.justHit && view.justHit.includes(id)) cls += ' hit';
       pk.className = cls;
-      const braced = !!(state.pieceBrace && state.pieceBrace[id]);
-      const brace = pk.querySelector('.brace');
-      if (braced && !brace) { const br = document.createElement('div'); br.className = 'brace'; pk.appendChild(br); }
-      if (!braced && brace) brace.remove();
       // A broken piece has dropped a chunk: it lies on the ground below
       const g = el._geo[id], deb = el._debris[id];
       if (broken && !deb) {
@@ -3041,7 +3086,8 @@ function updateStabilityUI() {
 const PULL_COST = 11, PRISTINE_COST = 6, NEAR_COST = 4; // tuned without props: cave-ins ≈3% good players, ≈45–50% average
 
 // offsets: how far each placed find is from where it belongs (0 exact, 1 one off, 2+ out)
-function excavate(offsets) {
+// bonus: stability won back on top (a matched pair)
+function excavate(offsets, bonus = 0) {
   const site = currentSite();
   lastPulledBlocks = [];
   const wrongCount = offsets.filter(d => d >= 2).length;
@@ -3069,7 +3115,6 @@ function excavate(offsets) {
     // Cost follows the layer's material: pristine work always resists better, even once damaged
     const cost = state.siteConds[c.bi] === 'pristine' ? PRISTINE_COST : PULL_COST;
     state.pieceDmg[c.id] = (state.pieceDmg[c.id] || 0) + 1;
-    delete state.pieceBrace[c.id];
     lastPulledBlocks.push({ id: c.id, cost });
     if (!justHit.includes(c.id)) justHit.push(c.id);
     if (effCond(c.bi, c.pi) === 'broken') justBroken.push(c.id);
@@ -3077,6 +3122,7 @@ function excavate(offsets) {
   }
 
   if (wrongCount === 0 && nearCount === 0) state.towerStability += 5; // a perfect round
+  state.towerStability += bonus;
 
   state.towerStability = Math.max(0, Math.min(100, state.towerStability));
   updateStabilityUI();
@@ -3086,30 +3132,12 @@ function excavate(offsets) {
 }
 
 function routeAfterPulls() {
-  if (state.towerStability <= 0 && state.towerBearings > 0 && lastPulledBlocks.length > 0) {
-    $('btn-save').hidden = false; $('btn-save').classList.add('urgent'); $('btn-next').hidden = true;
-  } else if (state.towerStability <= 0) {
-    $('btn-next').hidden = true; $('btn-save').hidden = true;
+  if (state.towerStability <= 0) {
+    $('btn-next').hidden = true;
     setTimeout(() => triggerCollapse(), 800);
-  } else if (state.towerBearings > 0 && lastPulledBlocks.length > 0) {
-    $('btn-save').hidden = false; $('btn-save').classList.remove('urgent'); $('btn-next').hidden = false;
   } else {
-    $('btn-save').hidden = true; $('btn-next').hidden = false;
+    $('btn-next').hidden = false;
   }
-}
-
-function saveBearing() {
-  if (state.towerBearings <= 0 || lastPulledBlocks.length === 0 || state.towerCollapsed) return;
-  const entry = lastPulledBlocks.pop();
-  state.towerBearings--;
-  state.pieceDmg[entry.id] = Math.max(0, (state.pieceDmg[entry.id] || 0) - 1);
-  state.pieceBrace[entry.id] = true;
-  state.towerStability = Math.min(100, state.towerStability + (entry.cost || PULL_COST) + 1);
-  updateStabilityUI();
-  renderSite($('site-area'), { tilt: siteTilt() });
-  renderLives();
-  saveState();
-  routeAfterPulls();
 }
 
 function triggerCollapse() {
@@ -3133,14 +3161,12 @@ window.addEventListener('resize', () => {
 function renderRound() {
   showScreen('game-screen');
   renderProgress();
-  renderLives();
   setPalette(state.totalRound);
   $('feedback-area').hidden = true;
   $('btn-lock').hidden = false;
   $('btn-lock').disabled = false;
-  $('btn-save').hidden = true;
   $('feedback-fact').hidden = true;
-  $('feedback-prop').hidden = true;
+  $('feedback-note').hidden = true;
   $('feedback-layer').hidden = true;
   state.locked = false;
   selectedIdx = null;
@@ -3168,15 +3194,20 @@ function renderRound() {
     $('phase-label').textContent = 'Excavate';
     $('round-count').textContent = `${state.round + 1} of 5`;
     const sq = stackQs[state.round];
-    $('question-text').textContent = 'Catalogue these finds';
+    const kind = sq.kind || 'strata';
+    $('question-text').textContent = TRENCH_COPY[kind].q;
     $('q-cat').textContent = CATEGORIES[sq.c]?.name || '';
-    $('stack-prompt').textContent = sq.prompt;
+    $('stack-prompt').textContent = TRENCH_COPY[kind].prompt(sq);
+    $('stack-hint').textContent = TRENCH_COPY[kind].hint;
+    $('stack-hint').classList.remove('warn');
     $('estimate-ui').hidden = true;
-    $('q-format').hidden = true;
+    // Name the trench type, except on old all-Strata digs where there's nothing to tell apart
+    $('q-format').hidden = !stackQs.some(q => q.kind && q.kind !== 'strata');
+    $('q-format').textContent = TRENCH_NAMES[kind];
     $('stack-ui').hidden = false;
     $('stability-row').hidden = false;
-    state.stackOrder = [...sq.shuffled];
-    renderStackItems();
+    if (kind === 'strata') { state.stackOrder = [...sq.shuffled]; renderStackItems(); }
+    else { state.picks = []; renderPickItems(); }
     updateStabilityUI();
     renderSite($('site-area'), { tilt: siteTilt() });
     $('btn-lock').disabled = false;
@@ -3201,6 +3232,47 @@ function renderStackItems() {
     div.addEventListener('pointerdown', onPointerDown);
     container.appendChild(div);
   });
+}
+
+// ---- TAP TRENCHES (Intrusive find, Forgery, Pick the pair) ----
+const TRENCH_COPY = {
+  strata: { q: 'Catalogue these finds', prompt: sq => sq.prompt, hint: 'Drag to move, or tap two finds to swap them', need: 0 },
+  intrusive: { q: 'Spot the intrusive find', prompt: sq => `${sq.prompt} — except one`, hint: 'Tap the find that doesn’t belong, then lock in', need: 1 },
+  forgery: { q: 'Spot the forged label', prompt: sq => `${sq.prompt}: two labels are genuine`, hint: 'Tap the forged label, then lock in', need: 1 },
+  pair: { q: 'Pick the pair', prompt: sq => sq.prompt, hint: 'Tap the two finds that belong together, then lock in', need: 2 },
+};
+function renderPickItems() {
+  const sq = stackQs[state.round], container = $('stack-items');
+  container.innerHTML = '';
+  sq.items.forEach((item, idx) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pick-item' + (sq.kind === 'forgery' ? ' label' : '') + (state.picks.includes(idx) ? ' selected' : '');
+    b.setAttribute('aria-pressed', state.picks.includes(idx));
+    b.innerHTML = `<span class="pick-dot"></span><span class="item-text">${escapeHtml(item)}</span>`;
+    b.addEventListener('click', () => onPick(idx));
+    container.appendChild(b);
+  });
+}
+function onPick(idx) {
+  if (state.locked) return;
+  const need = TRENCH_COPY[stackQs[state.round].kind].need;
+  if (state.picks.includes(idx)) state.picks = state.picks.filter(i => i !== idx);
+  else state.picks = need === 1 ? [idx] : [...state.picks, idx].slice(-need); // a third tap drops the oldest pick
+  $('stack-hint').textContent = TRENCH_COPY[stackQs[state.round].kind].hint;
+  $('stack-hint').classList.remove('warn');
+  renderPickItems();
+}
+// Lock In before enough is picked: say what's missing instead of locking
+function pickIncomplete() {
+  const sq = stackQs[state.round];
+  if (state.phase !== 'stack' || !sq || !sq.kind || sq.kind === 'strata') return false;
+  const need = TRENCH_COPY[sq.kind].need;
+  if ((state.picks || []).length >= need) return false;
+  const h = $('stack-hint');
+  h.textContent = need === 2 ? (state.picks.length ? 'Pick one more' : 'Pick two finds first') : sq.kind === 'forgery' ? 'Pick a label first' : 'Pick a find first';
+  h.classList.add('warn');
+  return true;
 }
 
 function onPointerDown(e) {
@@ -3349,12 +3421,18 @@ $('slider').addEventListener('input', e => {
 // ---- TORCH TIMER ----
 // 20s per survey question, 60s per excavation round. The deadline is saved, so leaving
 // the page or refreshing doesn't stop the clock; when it runs out, the current answer locks in.
-const ROUND_SECONDS = { estimate: 20, stack: 60 };
+const ROUND_SECONDS = { estimate: 20, stack: 60, tap: 30 };
+// Strata trenches get the full minute; the single-tap trenches get half that
+function roundSeconds() {
+  if (state.phase !== 'stack') return ROUND_SECONDS.estimate;
+  const k = stackQs[state.round] && stackQs[state.round].kind;
+  return k && k !== 'strata' ? ROUND_SECONDS.tap : ROUND_SECONDS.stack;
+}
 let torchTicker = null;
 
 function startTorch() {
   if (!state.timer || state.timer.round !== state.totalRound) {
-    state.timer = { round: state.totalRound, deadline: Date.now() + ROUND_SECONDS[state.phase] * 1000 };
+    state.timer = { round: state.totalRound, deadline: Date.now() + roundSeconds() * 1000 };
     saveState();
   }
   $('torch').hidden = false;
@@ -3370,7 +3448,7 @@ function stopTorch() {
 
 function tickTorch() {
   if (state.locked || !state.timer || !$('game-screen').classList.contains('active')) { stopTorch(); return; }
-  const total = ROUND_SECONDS[state.phase] * 1000;
+  const total = roundSeconds() * 1000;
   const left = Math.max(0, state.timer.deadline - Date.now());
   $('torch-fill').style.width = (left / total * 100) + '%';
   $('torch-t').textContent = Math.ceil(left / 1000);
@@ -3380,12 +3458,14 @@ function tickTorch() {
 
 function lockIn(timedOut) {
   if (state.locked) return;
+  if (!timedOut && pickIncomplete()) return;
   if (dragState) onDragEnd(); // a find mid-drag drops where it is
   pending = null; selectedIdx = null;
   state.locked = true;
   stopTorch();
   $('btn-lock').hidden = true;
   if (state.phase === 'estimate') lockEstimate();
+  else if (stackQs[state.round].kind && stackQs[state.round].kind !== 'strata') lockPick();
   else lockStack();
   if (timedOut) {
     const last = state.scores[state.scores.length - 1];
@@ -3429,8 +3509,7 @@ function lockEstimate() {
   const score = Math.max(0, Math.round(100 - diff * 3)); // 3 points per % off: 10 off = 70, 34+ off = 0
   const emoji = diff <= 2 ? '🟩' : diff <= 7 ? '🟨' : diff <= 15 ? '🟧' : '🟥';
 
-  const lifeLost = false, lifeWon = false; // timber props were removed
-  state.scores.push({ phase: 'estimate', fmt: q.fmt || 'pct', q: q.q, c: q.c, guess: state.guess, answer, d: diff, gPos: j.gPos, aPos: j.aPos, gTxt: j.gTxt, aTxt: j.aTxt, offTxt: j.offTxt, score, emoji, detail: j.detail, lifeLost, lifeWon });
+  state.scores.push({ phase: 'estimate', fmt: q.fmt || 'pct', q: q.q, c: q.c, guess: state.guess, answer, d: diff, gPos: j.gPos, aPos: j.aPos, gTxt: j.gTxt, aTxt: j.aTxt, offTxt: j.offTxt, score, emoji, detail: j.detail });
 
   // Brush away the next layer: its condition comes from how close the guess was.
   // A complete miss (no points) also leaves part of the layer missing.
@@ -3482,7 +3561,7 @@ function lockStack() {
   const score = exact * 20 + near * 10;
   const emoji = score === 100 ? '🟩' : score >= 60 ? '🟨' : score >= 20 ? '🟧' : '🟥';
 
-  state.scores.push({ phase: 'stack', q: sq.prompt, c: sq.c, score, emoji, offsets, detail: `${exact} exact · ${near} one off`, lifeLost: false });
+  state.scores.push({ phase: 'stack', kind: 'strata', q: sq.prompt, c: sq.c, score, emoji, offsets, detail: `${exact} exact · ${near} one off` });
 
   const fb = $('feedback-area'); fb.hidden = false;
   $('feedback-score').textContent = `+${score}`;
@@ -3511,16 +3590,54 @@ function lockStack() {
   saveState();
 }
 
+// Intrusive find, Forgery, Pick the pair: right scores 100, wrong scores nothing.
+// For the site, a right answer counts like an exact find (it steadies it) and a wrong pick like a
+// find two or more places out (it damages a piece). A matched pair also wins back PAIR_RESTORE.
+function lockPick() {
+  const sq = stackQs[state.round], picks = [...(state.picks || [])].sort((a, b) => a - b);
+  const hits = picks.filter(i => sq.answer.includes(i)).length;
+  const isPair = sq.kind === 'pair';
+  const right = hits === sq.answer.length;
+  const score = isPair ? (right ? 100 : hits === 1 ? 40 : 0) : right ? 100 : 0;
+  const emoji = score === 100 ? '🟩' : score >= 40 ? '🟧' : '🟥';
+  // Two wrong-pick hits for a miss; a half-right pair loses one piece; nothing picked counts as a miss
+  const offsets = right ? sq.answer.map(() => 0) : isPair ? (hits === 1 ? [0, 2] : [2, 2]) : [2, 2];
+  const head = {
+    intrusive: right ? 'Intruder found' : picks.length ? 'That one belonged' : 'No find picked',
+    forgery: right ? 'Forgery spotted' : picks.length ? 'That label was genuine' : 'No label picked',
+    pair: right ? 'Pair matched' : hits === 1 ? 'One of the pair' : picks.length ? 'Not a pair' : 'No pair picked',
+  }[sq.kind];
+  state.scores.push({ phase: 'stack', kind: sq.kind, q: isPair ? sq.answer.map(i => sq.items[i]).join(' & ') : sq.prompt, c: sq.c, score, emoji, offsets, picks, answer: sq.answer, hits, detail: head });
+
+  const fb = $('feedback-area'); fb.hidden = false;
+  $('feedback-score').textContent = `+${score}`;
+  $('feedback-score').style.color = score >= 80 ? 'var(--success)' : score >= 40 ? 'var(--warn)' : 'var(--miss)';
+  $('feedback-detail').textContent = head;
+  const tag = { intrusive: 'intruder', forgery: 'forged', pair: 'the pair' }[sq.kind];
+  $('feedback-visual').innerHTML = '<div style="display:flex;flex-direction:column;gap:6px;width:100%;">' +
+    sq.items.map((item, i) => {
+      const isAns = sq.answer.includes(i), picked = picks.includes(i);
+      if (!isAns && !picked) return `<div class="stack-feedback-item dim"><div class="result-mark"></div><div class="item-text">${escapeHtml(item)}</div></div>`;
+      const cls = isAns ? (picked ? 'correct' : 'near') : 'wrong';
+      const mark = isAns ? (picked ? '✓' : '!') : '✗';
+      return `<div class="stack-feedback-item ${cls}"><div class="result-mark">${mark}</div><div class="item-text">${escapeHtml(item)}</div>${isAns ? `<div class="correct-pos">${tag}</div>` : ''}</div>`;
+    }).join('') + '</div>';
+  const note = $('feedback-note');
+  note.hidden = !(isPair && right);
+  if (isPair && right) { note.className = 'feedback-note won'; note.textContent = `A matched pair steadies the site: +${PAIR_RESTORE}% stability`; }
+
+  $('stack-ui').hidden = true;
+  $('question-text').textContent = sq.kind === 'pair' ? 'Pick the pair' : sq.prompt;
+  showFact(sq.f);
+  excavate(offsets, isPair && right ? PAIR_RESTORE : 0);
+  saveState();
+}
+
 function showFact(text) {
   const el = $('feedback-fact');
   el.textContent = text || '';
   el.hidden = !text;
 }
-
-// ---- SAVE BEARING BUTTON ----
-$('btn-save').addEventListener('click', () => {
-  saveBearing();
-});
 
 // ---- NEXT ----
 $('btn-next').addEventListener('click', () => advance());
@@ -3532,11 +3649,7 @@ function advance() {
   lastPulledBlocks = []; // Clear save opportunity
   if (state.phase === 'estimate' && state.round >= 5) {
     state.phase = 'stack'; state.round = 0;
-    // The props you kept through the survey are the props you carry in
     const ratioTotal = state.scores.filter(s => s.phase === 'estimate').reduce((a, s) => a + s.score, 0);
-    state.towerBearings = 0; // no props: nothing can be shored up
-    state.propsCarried = state.towerBearings;
-    state.stackLives = 3; // show all three slots so snapped props stay visible
 
     // Set starting stability based on estimate performance
     if (ratioTotal >= 360) state.towerStability = 100;
@@ -3549,7 +3662,9 @@ function advance() {
     saveState(); setPalette(state.totalRound);
 
     $('inter-phase').textContent = 'Phase Two';
-    $('inter-desc').textContent = `Your survey uncovered ${currentSite().name.replace(/^The /, 'the ')}. Now catalogue five finds each round — anything more than one place out knocks a piece out of it.`;
+    $('inter-desc').textContent = stackQs.some(q => q.kind && q.kind !== 'strata')
+      ? `Your survey uncovered ${currentSite().name.replace(/^The /, 'the ')}. Now work five trenches: put finds in order, then spot an intruder, a forgery and a pair. Mistakes knock pieces out of it.`
+      : `Your survey uncovered ${currentSite().name.replace(/^The /, 'the ')}. Now catalogue five finds each round — anything more than one place out knocks a piece out of it.`;
     $('inter-lives').textContent = `The site starts at ${state.towerStability}% stability`;
     showScreen('inter-screen'); return;
   }
@@ -3609,7 +3724,7 @@ function showResults() {
   $('journal-date').textContent = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const fb = $('fr-failed');
   fb.hidden = !state.failed;
-  fb.textContent = state.towerCollapsed ? '⚠ Cave-in — dig terminated' : '⚠ Dig terminated — all props lost';
+  fb.textContent = state.towerCollapsed ? '⚠ Cave-in — dig terminated' : '⚠ Dig terminated';
   $('survey-score').textContent = total;
   $('survey-rating').textContent = state.failed ? `Failed at ${state.failedAt}` : getSurveyRating(total);
   $('fr-prov').hidden = !(state.provenance > 0);
@@ -3703,7 +3818,7 @@ function showResults() {
     if (s.gPos !== undefined) { g = s.gPos; a = s.aPos; }
     const gapW = Math.abs(g - a);
     const tone = d <= 7 ? 'var(--success)' : d <= 15 ? 'var(--warn)' : 'var(--miss)';
-    const tag = (s.timedOut ? '<span class="lg-tag time">Out of time</span>' : '') + (s.lifeLost ? '<span class="lg-tag lost">Prop snapped</span>' : s.lifeWon ? '<span class="lg-tag won">Prop recovered</span>' : '');
+    const tag = (s.timedOut ? '<span class="lg-tag time">Out of time</span>' : '');
     return `<div class="lg-row">
       <span class="swatch cond-${condFor(d)}" title="Layer uncovered"></span>
       <div class="lg-main">
@@ -3722,6 +3837,19 @@ function showResults() {
   $('log-stack-wrap').hidden = stk.length === 0;
   $('log-stack-total').textContent = `${stkScore} / 500`;
   $('log-stack').innerHTML = stk.map((s, i) => {
+    if (s.kind && s.kind !== 'strata') {
+      // Tap trenches: one pip per thing to find
+      const pips = (s.answer || [0]).map((_, k) => `<i class="${k < s.hits ? 'exact' : 'out'}"></i>`).join('');
+      return `<div class="lg-row">
+      <span class="lg-n">${i + 1}</span>
+      <div class="lg-main">
+        <div class="lg-q">${catLabel(s.c)}${escapeHtml(s.q)}</div>
+        <div class="lg-pips">${pips}</div>
+        <div class="lg-meta"><span>${TRENCH_NAMES[s.kind]}</span><span>${escapeHtml(s.detail || '')}</span>${s.timedOut ? '<span class="lg-tag time">Out of time</span>' : ''}</div>
+      </div>
+      <b class="lg-pts" style="color:${ptsColor(s.score)}">${s.score}</b>
+    </div>`;
+    }
     let offs = s.offsets;
     if (!offs) { // older saves: rebuild from the summary
       const m = /(\d+) exact · (\d+) one off/.exec(s.detail || '');
@@ -3735,7 +3863,7 @@ function showResults() {
       <div class="lg-main">
         <div class="lg-q">${puzzleTheme ? '' : catLabel(catOf(s, STACK_BANK, 'prompt'))}${s.q}</div>
         <div class="lg-pips">${pips}</div>
-        <div class="lg-meta"><span><b>${ex}</b> exact</span>${nr ? `<span><b>${nr}</b> one off</span>` : ''}${s.timedOut ? '<span class="lg-tag time">Out of time</span>' : ''}</div>
+        <div class="lg-meta">${s.kind ? `<span>${TRENCH_NAMES.strata}</span>` : ''}<span><b>${ex}</b> exact</span>${nr ? `<span><b>${nr}</b> one off</span>` : ''}${s.timedOut ? '<span class="lg-tag time">Out of time</span>' : ''}</div>
       </div>
       <b class="lg-pts" style="color:${ptsColor(s.score)}">${s.score}</b>
     </div>`;
@@ -4003,7 +4131,7 @@ function showForger() {
   window.scrollTo(0, 0);
   const played = state.scores.filter(s => s.phase === 'stack').length;
   $('fg-list').innerHTML = stackQs.slice(0, played).map((sq, i) =>
-    `<button class="fg-item" data-i="${i}"><small>Round ${i + 1} · ${sq.prompt}</small><b>${forger.decoys[i]}</b></button>`).join('');
+    `<button class="fg-item" data-i="${i}"><small>Round ${i + 1} · ${sq.kind && sq.kind !== 'strata' ? TRENCH_NAMES[sq.kind] : sq.prompt}</small><b>${forger.decoys[i]}</b></button>`).join('');
   $('fg-list').querySelectorAll('.fg-item').forEach(b => b.addEventListener('click', () => answerForger(+b.dataset.i)));
   $('fg-reveal').hidden = true; $('btn-fg-done').hidden = true; $('fg-torch').hidden = false;
   $('fg-sub').textContent = "One of these never existed. Spot it, and you'll uncover what was really buried there.";
@@ -4066,8 +4194,8 @@ function freshState() {
     phase: 'estimate', round: 0, totalRound: 0, locked: false, guess: 50,
     stackOrder: [], scores: [], finished: false,
     lives: 3, failed: false, failedAt: null,
-    v: 2, fv: 1, forgerResult: null, forgerDeadline: null, towerStability: 100, towerBearings: 0,
-    siteConds: [], pieceDmg: {}, pieceBrace: {}, towerCollapsed: false, stackLives: 3,
+    v: 2, fv: 1, forgerResult: null, forgerDeadline: null, towerStability: 100,
+    siteConds: [], pieceDmg: {}, towerCollapsed: false,
   };
 }
 
