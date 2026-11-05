@@ -512,11 +512,27 @@ input[type="range"]::-moz-range-thumb {
 .hist-caption { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.68rem; color: var(--fg-muted); }
 .feedback-bar { width: 100%; height: 8px; background: var(--glass-border); border-radius: 4px; position: relative; overflow: visible; }
 .feedback-marker { position: absolute; top: -6px; width: 3px; height: 20px; border-radius: 2px; transform: translateX(-50%); }
-.feedback-guess-marker { background: var(--accent); }
-.feedback-answer-marker { background: var(--success); }
-.answer-label { font-size: 0.72rem; font-weight: 600; position: absolute; top: 18px; transform: translateX(-50%); white-space: nowrap; }
-.answer-label.guess-l { color: var(--accent); }
-.answer-label.answer-l { color: var(--success); }
+.feedback-guess-marker { background: var(--gold); box-shadow: 0 0 0 1px var(--ink); }
+.feedback-answer-marker { background: var(--ink); }
+.answer-label { font-size: 0.72rem; font-weight: 600; position: absolute; transform: translateX(-50%); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.answer-label.answer-l { bottom: 18px; color: var(--ink); }
+.answer-label.guess-l { top: 18px; color: var(--gold-d); }
+#estimate-ui { width: 100%; }
+.fb-ends { display: flex; justify-content: space-between; gap: 12px; margin-top: -4px; font-family: var(--mono); font-size: 0.68rem; color: var(--fg-muted); }
+.fb-ends span:last-child { text-align: right; }
+/* Survey formats */
+.q-format { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--ink); color: var(--glass); font-family: var(--display); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: -8px; }
+.q-format[hidden] { display: none; }
+.guess-display.pin-name { font-family: var(--body); font-size: 1.35rem; font-weight: 700; padding: 6px 14px; border-radius: 10px; background: var(--ink); color: var(--glass); line-height: 1.2; text-align: center; }
+.slider-labels.pin-ends { font-family: var(--body); font-size: 0.82rem; color: var(--fg); align-items: flex-start; }
+.slider-labels.pin-ends { gap: 16px; }
+.slider-labels.pin-ends span { display: flex; flex-direction: column; line-height: 1.25; font-weight: 700; max-width: 48%; }
+.slider-labels.pin-ends span:last-child { text-align: right; align-items: flex-end; }
+.slider-labels.pin-ends small { font-family: var(--mono); font-size: 0.72rem; font-weight: 500; color: var(--fg-muted); }
+.nudge-row { display: flex; gap: 10px; }
+.nudge-row[hidden] { display: none; }
+.nudge-row button { min-width: 52px; height: 44px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--glass-hover); color: var(--ink); font-size: 1rem; font-weight: 700; }
+.nudge-row button:active { transform: scale(0.96); }
 .btn-next {
   background: var(--secondary); color: #fff; font-size: 1rem; font-weight: 700;
   padding: 12px 40px; border-radius: 50px;
@@ -1064,7 +1080,7 @@ input[type="range"]::-moz-range-thumb {
   <div class="divider"></div>
   <div class="tagline">Survey, then excavate. Ten rounds to uncover today's ancient site, and keep it standing.</div>
   <div class="how-to glass">
-    <div class="how-row"><div class="how-icon">🎯</div><div><strong>Survey (rounds 1–5)</strong><br>Slide to guess the percentage. Each answer brushes away a layer of the mound. The closer you are, the better the ruin underneath has survived.</div></div>
+    <div class="how-row"><div class="how-icon">🎯</div><div><strong>Survey (rounds 1–5)</strong><br>Five quick guesses: two percentages, two <em>Carbon date it</em> years and one <em>Pinpoint</em> on a line. Each answer brushes away a layer of the mound. The closer you are, the better the ruin underneath has survived.</div></div>
     <div class="how-row"><div class="how-icon">⛏</div><div><strong>Excavate (rounds 6–10)</strong><br>Put five finds in order — drag, or tap two to swap. Exact scores full points, one place off scores half. Finds further out knock pieces out of the ruin; at 0% stability it caves in.</div></div>
     <div class="how-row"><div class="how-icon">🔥</div><div><strong>The torch</strong><br>You get 20 seconds for each survey question and 60 for each excavation round. When the torch burns out, whatever you've set is locked in.</div></div>
   </div>
@@ -1104,6 +1120,7 @@ input[type="range"]::-moz-range-thumb {
   </div>
 
   <div class="question-card glass" id="question-card">
+    <div class="q-format" id="q-format" hidden></div>
     <div class="q-cat" id="q-cat"></div>
     <div class="question-text" id="question-text"></div>
 
@@ -1111,7 +1128,11 @@ input[type="range"]::-moz-range-thumb {
       <div class="slider-area">
         <div class="guess-display" id="guess-display">50<span>%</span></div>
         <input type="range" id="slider" min="0" max="100" value="50">
-        <div class="slider-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+        <div class="slider-labels" id="slider-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+        <div class="nudge-row" id="nudge-row" hidden>
+          <button type="button" id="nudge-down" aria-label="One year earlier">−1</button>
+          <button type="button" id="nudge-up" aria-label="One year later">+1</button>
+        </div>
       </div>
     </div>
 
@@ -2238,6 +2259,224 @@ const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 
 const catStacks = c => STACK_BANK.filter(q => q.c === c);
 const catRatios = c => RATIO_BANK.filter(q => q.c === c);
 
+// ---- CARBON DATE IT: guess the year ----
+const DATE_BANK = [
+  // General Knowledge
+  { c: "gk", q: "When did Britain switch to decimal currency?", a: 1971, f: "On Decimal Day, 15 February 1971, 240 old pennies to the pound became 100 new pence." },
+  { c: "gk", q: "When was the first UK National Lottery draw?", a: 1994, f: "The first draw was on 19 November 1994, hosted live on BBC One by Noel Edmonds." },
+  { c: "gk", q: "When did smoking in enclosed public places become illegal in England?", a: 2007, f: "The ban came in on 1 July 2007, a year after Scotland's." },
+  { c: "gk", q: "When did England bring in its plastic carrier bag charge?", a: 2015, f: "The 5p charge started in October 2015 and later rose to 10p." },
+  { c: "gk", q: "When did the first McDonald's open in the UK?", a: 1974, f: "It opened in Woolwich, south-east London, in 1974." },
+  { c: "gk", q: "When was the Highway Code first published?", a: 1931, f: "The first edition in 1931 cost one penny." },
+  { c: "gk", q: "When was the first commercial Christmas card sent?", a: 1843, f: "Sir Henry Cole commissioned it in 1843 — the same year A Christmas Carol came out." },
+  { c: "gk", q: "When was the Penny Black, the first adhesive postage stamp, issued?", a: 1840, f: "It went on sale in May 1840, with Queen Victoria's profile on it." },
+  { c: "gk", q: "When was the MOT test introduced?", a: 1960, f: "At first it only checked brakes, lights and steering, and only on cars over ten years old." },
+  { c: "gk", q: "When did wearing a seat belt in the front of a car become law in the UK?", a: 1983, f: "It became compulsory for drivers and front-seat passengers on 31 January 1983." },
+
+  // Music
+  { c: "music", q: "When did The Beatles release their first single, 'Love Me Do'?", a: 1962, f: "It came out in October 1962 and reached number 17 in the UK." },
+  { c: "music", q: "When was Live Aid held?", a: 1985, f: "The concerts at Wembley and in Philadelphia were held on the same day, 13 July 1985." },
+  { c: "music", q: "When did Queen release 'Bohemian Rhapsody'?", a: 1975, f: "It spent nine weeks at number one over Christmas 1975." },
+  { c: "music", q: "When was the first Glastonbury Festival?", a: 1970, f: "The first one, in September 1970, cost £1 and included free milk from the farm." },
+  { c: "music", q: "When did the UK Singles Chart begin?", a: 1952, f: "The NME published the first chart in November 1952." },
+  { c: "music", q: "When did Spotify launch?", a: 2008, f: "Spotify launched in Sweden in October 2008, with the UK among its first countries." },
+  { c: "music", q: "When did Oasis release 'Wonderwall'?", a: 1995, f: "It came out in October 1995 and peaked at number two." },
+  { c: "music", q: "When did Michael Jackson release the album 'Thriller'?", a: 1982, f: "Released in November 1982, it's widely cited as the best-selling album ever." },
+  { c: "music", q: "When did Adele release the album '21'?", a: 2011, f: "21 came out in January 2011 and became one of the UK's best-selling albums." },
+  { c: "music", q: "When was the first Eurovision Song Contest?", a: 1956, f: "Seven countries took part in Lugano, Switzerland, and the host country won." },
+
+  // Film
+  { c: "film", q: "When was the first Bond film, Dr. No, released?", a: 1962, f: "Sean Connery played Bond, and the film cost about $1 million to make." },
+  { c: "film", q: "When was Jaws released?", a: 1975, f: "Jaws is often called the first summer blockbuster." },
+  { c: "film", q: "When was the first Toy Story released?", a: 1995, f: "It was the first feature film made entirely with computer animation." },
+  { c: "film", q: "When was James Cameron's Titanic released?", a: 1997, f: "It won 11 Oscars, equalling Ben-Hur's record." },
+  { c: "film", q: "When was The Wizard of Oz released?", a: 1939, f: "Its switch from sepia to Technicolor is one of cinema's most famous moments." },
+  { c: "film", q: "When was the first Harry Potter film released?", a: 2001, f: "Harry Potter and the Philosopher's Stone came out in November 2001." },
+  { c: "film", q: "When was The Jazz Singer, the first feature-length 'talkie', released?", a: 1927, f: "Its first spoken line is \"You ain't heard nothin' yet!\"" },
+  { c: "film", q: "When was E.T. the Extra-Terrestrial released?", a: 1982, f: "It overtook Star Wars to become the highest-grossing film of its time." },
+  { c: "film", q: "When were the first Academy Awards held?", a: 1929, f: "The first ceremony lasted about 15 minutes, and the winners were announced months in advance." },
+  { c: "film", q: "When was Jurassic Park released?", a: 1993, f: "Its dinosaurs mixed computer animation with full-size animatronics." },
+
+  // TV
+  { c: "tv", q: "When did Coronation Street first air?", a: 1960, f: "The first episode went out on 9 December 1960." },
+  { c: "tv", q: "When did EastEnders first air?", a: 1985, f: "It began on 19 February 1985." },
+  { c: "tv", q: "When did Doctor Who first air?", a: 1963, f: "The first episode aired on 23 November 1963, the day after President Kennedy was shot." },
+  { c: "tv", q: "When did the BBC start the world's first regular high-definition TV service?", a: 1936, f: "It began from Alexandra Palace in north London in November 1936." },
+  { c: "tv", q: "When did Channel 4 launch?", a: 1982, f: "Its first programme on 2 November 1982 was Countdown." },
+  { c: "tv", q: "When did Friends first air?", a: 1994, f: "It ran for ten series, ending in 2004." },
+  { c: "tv", q: "When did The Great British Bake Off first air?", a: 2010, f: "It began on BBC Two before moving to BBC One and later Channel 4." },
+  { c: "tv", q: "When did Only Fools and Horses first air?", a: 1981, f: "The first episode, 'Big Brother', went out in September 1981." },
+  { c: "tv", q: "When did UK television start broadcasting in colour?", a: 1967, f: "BBC Two started colour broadcasts in July 1967 with coverage of Wimbledon." },
+  { c: "tv", q: "When did The Simpsons start as a full series?", a: 1989, f: "The first full episode was a Christmas special in December 1989." },
+
+  // Art
+  { c: "art", q: "When did Leonardo da Vinci start painting the Mona Lisa?", a: 1503, f: "He kept working on it for years and never handed it over to the person who commissioned it." },
+  { c: "art", q: "When did Michelangelo finish painting the Sistine Chapel ceiling?", a: 1512, f: "The work took about four years, mostly painted standing up on scaffolding." },
+  { c: "art", q: "When did Vincent van Gogh paint The Starry Night?", a: 1889, f: "He painted it from memory while staying at an asylum in Saint-Rémy." },
+  { c: "art", q: "When did Picasso paint Guernica?", a: 1937, f: "He painted it within weeks of the bombing of the Basque town during the Spanish Civil War." },
+  { c: "art", q: "When was the Angel of the North completed?", a: 1998, f: "Antony Gormley's steel sculpture has wings almost as wide as a jumbo jet's." },
+  { c: "art", q: "When did Tate Modern open?", a: 2000, f: "It opened in a former power station on the Thames." },
+  { c: "art", q: "When did Edvard Munch first paint The Scream?", a: 1893, f: "He made several versions, in paint and pastel." },
+  { c: "art", q: "When did Banksy's 'Girl with Balloon' shred itself at auction?", a: 2018, f: "Moments after selling at Sotheby's, it was renamed 'Love is in the Bin'." },
+  { c: "art", q: "When was the National Gallery in London founded?", a: 1824, f: "It began with 38 paintings, displayed in a house on Pall Mall." },
+
+  // Tech & Trade
+  { c: "tech", q: "When was the first text message sent?", a: 1992, f: "An engineer sent \"Merry Christmas\" from a computer to a mobile phone in December 1992." },
+  { c: "tech", q: "When did the Channel Tunnel open?", a: 1994, f: "The Queen and President Mitterrand opened it in May 1994." },
+  { c: "tech", q: "When did the first iPhone go on sale?", a: 2007, f: "It went on sale in the US in June 2007 and reached the UK that November." },
+  { c: "tech", q: "When did the London Underground open its first line?", a: 1863, f: "The Metropolitan Railway ran steam trains between Paddington and Farringdon." },
+  { c: "tech", q: "When was the World Wide Web opened up to the public?", a: 1991, f: "Tim Berners-Lee invented it at CERN." },
+  { c: "tech", q: "When did Concorde make its last commercial flight?", a: 2003, f: "British Airways' last passenger flight landed at Heathrow on 24 October 2003." },
+  { c: "tech", q: "When was the first email sent between two computers?", a: 1971, f: "Ray Tomlinson sent it, and chose the @ sign to separate user from machine." },
+  { c: "tech", q: "When was the world's first cash machine unveiled, in Enfield?", a: 1967, f: "It took paper vouchers, not cards, and paid out a maximum of £10." },
+  { c: "tech", q: "When was Google founded?", a: 1998, f: "Larry Page and Sergey Brin founded it in a friend's garage in California." },
+  { c: "tech", q: "When did Facebook launch?", a: 2004, f: "It started as a site for Harvard students." },
+
+  // Sport
+  { c: "sport", q: "When did England win the football World Cup?", a: 1966, f: "England beat West Germany 4–2 after extra time at Wembley." },
+  { c: "sport", q: "When was the first London Marathon?", a: 1981, f: "More than 6,000 runners finished the first race." },
+  { c: "sport", q: "When did Roger Bannister run the first sub-four-minute mile?", a: 1954, f: "He ran 3:59.4 at Iffley Road in Oxford." },
+  { c: "sport", q: "When was the first Wimbledon Championship held?", a: 1877, f: "Only men's singles was played, and around 200 people watched the final." },
+  { c: "sport", q: "When did the Premier League kick off?", a: 1992, f: "Brian Deane of Sheffield United scored its first goal." },
+  { c: "sport", q: "When did England win the Rugby World Cup?", a: 2003, f: "Jonny Wilkinson's drop goal in extra time beat Australia in Sydney." },
+  { c: "sport", q: "When were the first modern Olympic Games held?", a: 1896, f: "They were held in Athens with about 240 athletes, all men." },
+  { c: "sport", q: "When was the first FA Cup Final?", a: 1872, f: "Wanderers beat Royal Engineers 1–0 at the Kennington Oval." },
+  { c: "sport", q: "When did Andy Murray first win Wimbledon?", a: 2013, f: "He was the first British man to win the singles title since Fred Perry in 1936." },
+  { c: "sport", q: "When did Leicester City win the Premier League?", a: 2016, f: "Bookmakers had put them at 5,000–1 at the start of the season." },
+
+  // Culture
+  { c: "culture", q: "When was the first Harry Potter book published?", a: 1997, f: "The first print run was 500 copies." },
+  { c: "culture", q: "When was Shakespeare's First Folio published?", a: 1623, f: "It came out seven years after his death and saved 18 plays that might otherwise have been lost." },
+  { c: "culture", q: "When was Pride and Prejudice published?", a: 1813, f: "It came out anonymously, credited only to \"the Author of Sense and Sensibility\"." },
+  { c: "culture", q: "When was Nineteen Eighty-Four published?", a: 1949, f: "George Orwell wrote most of it on the Scottish island of Jura." },
+  { c: "culture", q: "When did Parker Brothers start selling Monopoly?", a: 1935, f: "It grew out of The Landlord's Game, which Lizzie Magie patented in 1904." },
+  { c: "culture", q: "When was A Christmas Carol published?", a: 1843, f: "Dickens wrote it in about six weeks, and the first edition sold out by Christmas Eve." },
+  { c: "culture", q: "When was The Hobbit published?", a: 1937, f: "Tolkien's publisher's ten-year-old son reviewed it before it was accepted." },
+  { c: "culture", q: "When was Frankenstein first published?", a: 1818, f: "Mary Shelley started writing it when she was 18." },
+
+  // History
+  { c: "history", q: "When was the Battle of Hastings?", a: 1066, f: "It was fought on 14 October 1066, near what's now the town of Battle." },
+  { c: "history", q: "When did King John agree to Magna Carta?", a: 1215, f: "He agreed to it at Runnymede, beside the Thames." },
+  { c: "history", q: "When was the Great Fire of London?", a: 1666, f: "It started in a bakery on Pudding Lane and burned for four days." },
+  { c: "history", q: "When did the Berlin Wall fall?", a: 1989, f: "Crowds began knocking it down on the night of 9 November 1989." },
+  { c: "history", q: "When did women in the UK first get the vote in general elections?", a: 1918, f: "At first only women over 30 who met a property qualification could vote." },
+  { c: "history", q: "When was the Battle of Waterloo?", a: 1815, f: "Wellington and Blücher defeated Napoleon in what's now Belgium." },
+  { c: "history", q: "When did Henry VIII become king?", a: 1509, f: "He was 17, and married Catherine of Aragon that same year." },
+  { c: "history", q: "When did the Spanish Armada sail against England?", a: 1588, f: "Storms wrecked more of its ships than the English fleet did." },
+  { c: "history", q: "When did Victoria become queen?", a: 1837, f: "She was 18 and reigned for nearly 64 years." },
+  { c: "history", q: "When was the Gunpowder Plot?", a: 1605, f: "Guy Fawkes was caught guarding the barrels on the night of 4–5 November." },
+
+  // World
+  { c: "world", q: "When was the Eiffel Tower completed?", a: 1889, f: "It was built for the 1889 World's Fair and was meant to stand for only 20 years." },
+  { c: "world", q: "When did Hong Kong return to Chinese rule?", a: 1997, f: "Britain handed it over at midnight on 30 June 1997." },
+  { c: "world", q: "When did euro notes and coins go into circulation?", a: 2002, f: "The euro existed on paper from 1999, but the cash arrived on 1 January 2002." },
+  { c: "world", q: "When did the Sydney Opera House open?", a: 1973, f: "It took 14 years to build and went ten years over schedule." },
+  { c: "world", q: "When did Nelson Mandela become President of South Africa?", a: 1994, f: "He took office after the country's first fully democratic election." },
+  { c: "world", q: "When did the Panama Canal open?", a: 1914, f: "It cut about 8,000 miles off the sea journey between New York and San Francisco." },
+  { c: "world", q: "When was the Statue of Liberty dedicated?", a: 1886, f: "It was a gift from France, shipped across in 350 pieces." },
+  { c: "world", q: "When did the Golden Gate Bridge open?", a: 1937, f: "At the time it had the longest main span of any suspension bridge in the world." },
+
+  // Science & Nature
+  { c: "science", q: "When did Neil Armstrong walk on the Moon?", a: 1969, f: "He stepped onto the Moon on 21 July 1969 (UK time)." },
+  { c: "science", q: "When was Dolly the sheep born?", a: 1996, f: "She was the first mammal cloned from an adult cell, at the Roslin Institute near Edinburgh." },
+  { c: "science", q: "When did Darwin publish On the Origin of Species?", a: 1859, f: "The first printing sold out on its first day." },
+  { c: "science", q: "When did Alexander Fleming discover penicillin?", a: 1928, f: "He noticed mould killing bacteria on a dish left out while he was on holiday." },
+  { c: "science", q: "When did Watson and Crick publish the double-helix structure of DNA?", a: 1953, f: "Rosalind Franklin's X-ray images were key to working it out." },
+  { c: "science", q: "When did Halley's Comet last pass close to Earth?", a: 1986, f: "It comes round about every 76 years, so next in 2061." },
+  { c: "science", q: "When was Pluto reclassified as a dwarf planet?", a: 2006, f: "The International Astronomical Union voted on it in Prague." },
+  { c: "science", q: "When was Sputnik 1, the first artificial satellite, launched?", a: 1957, f: "It was about the size of a beach ball and beeped as it orbited." },
+  { c: "science", q: "When did Isaac Newton publish his Principia?", a: 1687, f: "It set out his laws of motion and universal gravitation." },
+];
+
+// ---- PINPOINT: place something between two known points ----
+// lo/hi: [name, value]; a: the real value; u: unit ('year' for dates)
+const PIN_BANK = [
+  { c: "world", q: "Where does Mont Blanc's height fall between these two?", item: "Mont Blanc", lo: ["Ben Nevis", 1345], hi: ["Everest", 8849], a: 4806, u: "m", f: "Mont Blanc is about 4,806 m, though its icy summit rises and falls by a few metres." },
+  { c: "world", q: "Where does Kilimanjaro's height fall between these two?", item: "Kilimanjaro", lo: ["Mont Blanc", 4806], hi: ["Everest", 8849], a: 5895, u: "m", f: "Kilimanjaro is the tallest mountain in Africa, and the tallest free-standing mountain anywhere." },
+  { c: "world", q: "Where does Snowdon's height fall between these two?", item: "Snowdon", lo: ["Scafell Pike", 978], hi: ["Ben Nevis", 1345], a: 1085, u: "m", f: "Snowdon (Yr Wyddfa) is the highest mountain in Wales." },
+  { c: "world", q: "Where does the Shard's height fall between these two?", item: "The Shard", lo: ["Big Ben's tower", 96], hi: ["Burj Khalifa", 828], a: 310, u: "m", f: "At 310 m, the Shard is the tallest building in the UK." },
+  { c: "world", q: "Where does the London Eye's height fall between these two?", item: "London Eye", lo: ["Angel of the North", 20], hi: ["Eiffel Tower", 330], a: 135, u: "m", f: "The London Eye is 135 m tall and takes about 30 minutes to go round once." },
+  { c: "world", q: "Where does the Danube's length fall between these two rivers?", item: "Danube", lo: ["Thames", 346], hi: ["Nile", 6650], a: 2850, u: "km", f: "The Danube flows through ten countries, more than any other river in the world." },
+  { c: "world", q: "Where does the Statue of Liberty's dedication fall between these two?", item: "Statue of Liberty", lo: ["US Declaration of Independence", 1776], hi: ["Golden Gate Bridge opens", 1937], a: 1886, u: "year", f: "The Statue of Liberty was dedicated in 1886." },
+
+  { c: "history", q: "Where does the Moon landing fall between these two?", item: "Moon landing", lo: ["End of WWII", 1945], hi: ["Fall of the Berlin Wall", 1989], a: 1969, u: "year", f: "Apollo 11 landed in July 1969." },
+  { c: "history", q: "Where does the Battle of Waterloo fall between these two?", item: "Waterloo", lo: ["US Declaration of Independence", 1776], hi: ["Victoria becomes queen", 1837], a: 1815, u: "year", f: "Waterloo was fought in June 1815." },
+  { c: "history", q: "Where does Magna Carta fall between these two?", item: "Magna Carta", lo: ["Battle of Hastings", 1066], hi: ["Battle of Agincourt", 1415], a: 1215, u: "year", f: "King John agreed to Magna Carta in 1215." },
+  { c: "history", q: "Where does the Spanish Armada fall between these two?", item: "Spanish Armada", lo: ["Henry VIII becomes king", 1509], hi: ["Great Fire of London", 1666], a: 1588, u: "year", f: "The Armada sailed in 1588." },
+
+  { c: "culture", q: "Where does Shakespeare's birth fall between these two?", item: "Shakespeare born", lo: ["Henry VIII becomes king", 1509], hi: ["Great Fire of London", 1666], a: 1564, u: "year", f: "Shakespeare was born in Stratford-upon-Avon in 1564." },
+  { c: "culture", q: "Where does Pride and Prejudice fall between these two?", item: "Pride and Prejudice", lo: ["Shakespeare's First Folio", 1623], hi: ["Nineteen Eighty-Four", 1949], a: 1813, u: "year", f: "Pride and Prejudice was published in 1813." },
+  { c: "culture", q: "Where does The Hobbit fall between these two?", item: "The Hobbit", lo: ["A Christmas Carol", 1843], hi: ["First Harry Potter book", 1997], a: 1937, u: "year", f: "The Hobbit was published in 1937." },
+
+  { c: "music", q: "Where does 'Love Me Do' fall between these two?", item: "'Love Me Do'", lo: ["Elvis's 'Heartbreak Hotel'", 1956], hi: ["Live Aid", 1985], a: 1962, u: "year", f: "The Beatles' first single came out in 1962." },
+  { c: "music", q: "Where does 'Wannabe' fall between these two?", item: "'Wannabe'", lo: ["Live Aid", 1985], hi: ["Adele's '21'", 2011], a: 1996, u: "year", f: "The Spice Girls' first single came out in 1996." },
+  { c: "music", q: "Where does 'Bohemian Rhapsody' fall between these two?", item: "'Bohemian Rhapsody'", lo: ["'Love Me Do'", 1962], hi: ["'Thriller'", 1982], a: 1975, u: "year", f: "Queen released 'Bohemian Rhapsody' in 1975." },
+  { c: "music", q: "Where does the first Glastonbury fall between these two?", item: "First Glastonbury", lo: ["UK Singles Chart begins", 1952], hi: ["Live Aid", 1985], a: 1970, u: "year", f: "The first Glastonbury Festival was in 1970." },
+
+  { c: "film", q: "Where does Star Wars fall between these two?", item: "Star Wars", lo: ["Dr. No", 1962], hi: ["Titanic", 1997], a: 1977, u: "year", f: "The first Star Wars film came out in 1977." },
+  { c: "film", q: "Where does The Godfather fall between these two?", item: "The Godfather", lo: ["The Wizard of Oz", 1939], hi: ["Jurassic Park", 1993], a: 1972, u: "year", f: "The Godfather came out in 1972." },
+  { c: "film", q: "Where does Back to the Future fall between these two?", item: "Back to the Future", lo: ["Jaws", 1975], hi: ["Toy Story", 1995], a: 1985, u: "year", f: "Back to the Future came out in 1985 and travels back to 1955." },
+  { c: "film", q: "Where does The Godfather's running time fall between these two?", item: "The Godfather", lo: ["Toy Story", 81], hi: ["The Return of the King", 201], a: 175, u: "min", f: "The Godfather runs about 2 hours 55 minutes." },
+  { c: "film", q: "Where does Titanic's running time fall between these two?", item: "Titanic", lo: ["Toy Story", 81], hi: ["The Return of the King", 201], a: 194, u: "min", f: "Titanic runs about 3 hours 14 minutes." },
+
+  { c: "tv", q: "Where does Doctor Who's first episode fall between these two?", item: "Doctor Who begins", lo: ["BBC TV service starts", 1936], hi: ["Channel 4 launches", 1982], a: 1963, u: "year", f: "Doctor Who first aired in November 1963." },
+  { c: "tv", q: "Where does Friends' first episode fall between these two?", item: "Friends begins", lo: ["The Simpsons begins", 1989], hi: ["Bake Off begins", 2010], a: 1994, u: "year", f: "Friends first aired in September 1994." },
+  { c: "tv", q: "Where does Only Fools and Horses fall between these two?", item: "Only Fools and Horses", lo: ["Coronation Street begins", 1960], hi: ["EastEnders begins", 1985], a: 1981, u: "year", f: "Only Fools and Horses first aired in 1981." },
+
+  { c: "art", q: "Where does The Starry Night fall between these two?", item: "The Starry Night", lo: ["Mona Lisa begun", 1503], hi: ["Guernica", 1937], a: 1889, u: "year", f: "Van Gogh painted The Starry Night in 1889." },
+  { c: "art", q: "Where does Tate Modern's opening fall between these two?", item: "Tate Modern opens", lo: ["Guernica", 1937], hi: ["Banksy's shredded painting", 2018], a: 2000, u: "year", f: "Tate Modern opened in May 2000." },
+
+  { c: "sport", q: "Where does the first Wimbledon fall between these two?", item: "First Wimbledon", lo: ["First FA Cup Final", 1872], hi: ["First modern Olympics", 1896], a: 1877, u: "year", f: "The first Wimbledon Championship was in 1877." },
+  { c: "sport", q: "Where does England's World Cup win fall between these two?", item: "World Cup win", lo: ["Bannister's four-minute mile", 1954], hi: ["First London Marathon", 1981], a: 1966, u: "year", f: "England won the World Cup in 1966." },
+  { c: "sport", q: "Where does a marathon fall between these two distances?", item: "Marathon", lo: ["10K", 10], hi: ["Ultra (100 km)", 100], a: 42.195, u: "km", f: "A marathon is 42.195 km — 26 miles 385 yards." },
+
+  { c: "science", q: "Where does Sputnik's launch fall between these two?", item: "Sputnik 1", lo: ["Wright brothers' first flight", 1903], hi: ["Moon landing", 1969], a: 1957, u: "year", f: "Sputnik 1 was launched in October 1957." },
+  { c: "science", q: "Where does Fleming's discovery of penicillin fall between these two?", item: "Penicillin", lo: ["On the Origin of Species", 1859], hi: ["DNA double helix", 1953], a: 1928, u: "year", f: "Fleming noticed penicillin in 1928." },
+  { c: "science", q: "Where does Mars's average distance from the Sun fall between these two?", item: "Mars", lo: ["Earth", 1], hi: ["Jupiter", 5.2], a: 1.52, u: "AU", f: "Mars is about 1.5 times as far from the Sun as Earth is." },
+  { c: "science", q: "Where does Saturn's average distance from the Sun fall between these two?", item: "Saturn", lo: ["Jupiter", 5.2], hi: ["Uranus", 19.2], a: 9.5, u: "AU", f: "Saturn is about 9.5 times as far from the Sun as Earth is." },
+
+  { c: "gk", q: "Where does the Penny Black fall between these two?", item: "Penny Black", lo: ["Battle of Waterloo", 1815], hi: ["Eiffel Tower completed", 1889], a: 1840, u: "year", f: "The Penny Black was issued in 1840." },
+  { c: "gk", q: "Where does Decimal Day fall between these two?", item: "Decimal Day", lo: ["M1 motorway opens", 1959], hi: ["Channel Tunnel opens", 1994], a: 1971, u: "year", f: "Britain went decimal in 1971." },
+  { c: "gk", q: "Where does a mile fall between these two?", item: "1 mile", lo: ["1 kilometre", 1000], hi: ["1 nautical mile", 1852], a: 1609, u: "m", f: "A mile is 1,609 metres." },
+  { c: "gk", q: "Where does a British pint fall between these two?", item: "British pint", lo: ["US pint", 473], hi: ["1 litre", 1000], a: 568, u: "ml", f: "A British pint is 568 ml, about a fifth bigger than an American pint." },
+  { c: "gk", q: "Where does a yard fall between these two?", item: "1 yard", lo: ["1 foot", 30.5], hi: ["1 metre", 100], a: 91.4, u: "cm", f: "A yard is 91.44 cm — three feet." },
+
+  { c: "tech", q: "Where does the first iPhone fall between these two?", item: "First iPhone", lo: ["Google founded", 1998], hi: ["Instagram launches", 2010], a: 2007, u: "year", f: "The first iPhone went on sale in 2007." },
+  { c: "tech", q: "Where does the first text message fall between these two?", item: "First text", lo: ["First email", 1971], hi: ["Facebook launches", 2004], a: 1992, u: "year", f: "The first text message was sent in 1992." },
+];
+
+// ---- SURVEY FORMATS ----
+// From 6 Nov 2026 each survey is two percentages, two Carbon date it and one Pinpoint, in a mixed order.
+const FORMAT_START = '2026-11-06';
+const FORMAT_NAMES = { pct: 'Percentage', date: 'Carbon date it', pin: 'Pinpoint' };
+const FORMAT_BANKS = { pct: RATIO_BANK, date: DATE_BANK, pin: PIN_BANK };
+const FORMAT_KEYS = { pct: 'ratio', date: 'date', pin: 'pin' };
+function surveyFormats(seedKey) { return shuffle(['pct', 'pct', 'date', 'date', 'pin'], seededRNG(hashDate('fmt-' + seedKey))); }
+function fmtPool(f, c) { return FORMAT_BANKS[f].filter(q => q.c === c); }
+// The slider window and how strictly years are marked both depend on the era
+function dateTier(a) {
+  if (a >= 1900) return { lo: 1900, hi: 2026, k: 1.5 };
+  if (a >= 1750) return { lo: 1750, hi: 1950, k: 0.75 };
+  return { lo: 1000, hi: 1750, k: 0.35 };
+}
+function fmtNum(v, u) {
+  if (u === 'year') return String(Math.round(v));
+  const r = Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10;
+  return r.toLocaleString('en-GB') + (u === 'min' ? ' min' : ' ' + u);
+}
+// How often each format-and-topic pairing came up on earlier days, so each pool rotates without repeats
+function surveyUsageBefore(dayIdx) {
+  const used = {};
+  const bump = k => { used[k] = (used[k] || 0) + 1; };
+  for (let i = 0; i < dayIdx; i++) {
+    const d = new Date(EPOCH); d.setDate(d.getDate() + i);
+    const key = localKey(d), m = dayMix(key);
+    if (key < FORMAT_START) { m.s.forEach(c => bump('pct:' + c)); continue; }
+    surveyFormats(key).forEach((f, j) => { if (f === 'pct') bump(fmtPool(f, m.s[j]).length ? 'pct:' + m.s[j] : 'pct:any'); });
+  }
+  return used;
+}
+
 // Draw n topics by weight, no topic more than `cap` times
 function drawCats(rng, n, cap, pool) {
   const out = [];
@@ -2383,9 +2622,38 @@ function buildPuzzle(practiceKey, noForger) {
   }
 
   // Survey: today's topics in a random order
-  let surveyQs = pickFor(mix.s, catRatios, 'ratio', used.s);
-  if (surveyQs.length < 5) surveyQs.push(...rotationPick(RATIO_BANK, 5 - surveyQs.length, 'ratio-any', dayIndex * 5 + off, new Set(surveyQs)));
-  ratioQs = shuffle(surveyQs, rng).slice(0, 5);
+  if (isPractice || dateStr >= FORMAT_START) {
+    // Two percentages, two Carbon date it, one Pinpoint, in a mixed order
+    const fmts = surveyFormats(seedKey);
+    const usedF = isPractice ? {} : surveyUsageBefore(dayIndex);
+    const out = new Array(5);
+    // Percentages follow the day's weighted topics; Carbon date it and Pinpoint each walk their whole bank,
+    // so neither repeats until every question in it has been used
+    const n = isPractice ? 0 : Math.max(0, dayIndex - Math.round((parseKey(FORMAT_START) - EPOCH) / 86400000));
+    const pin = { ...rotationPick(PIN_BANK, 1, 'pin-all', n + off)[0], fmt: 'pin' };
+    const dates = rotationPick(DATE_BANK, 2, 'date-all', n * 2 + off)
+      .map(q => ({ ...q, fmt: 'date' }));
+    fmts.forEach((f, i) => {
+      if (f === 'pin') out[i] = pin;
+      else if (f === 'date') out[i] = dates.shift();
+      else {
+        const c = mix.s[i], pool = fmtPool('pct', c);
+        const skip = new Set(out.filter(Boolean).map(q => RATIO_BANK.find(r => r.q === q.q)).filter(Boolean));
+        let q = pool.length ? rotationPick(pool, 1, 'ratio-' + c, (usedF['pct:' + c] || 0) + off, skip)[0] : null;
+        if (!q) q = rotationPick(RATIO_BANK, 1, 'ratio-any', (usedF['pct:any'] || 0) + dayIndex + off, skip)[0];
+        out[i] = { ...q, fmt: 'pct' };
+      }
+    });
+    // If the Pinpoint shares a year with a Carbon date it question, ask the date first so the Pinpoint doesn't give it away
+    const pi = fmts.indexOf('pin');
+    const clash = out.findIndex((q, i) => i > pi && q.fmt === 'date' && pin.u === 'year' && [pin.a, pin.lo[1], pin.hi[1]].includes(q.a));
+    if (clash > -1) [out[pi], out[clash]] = [out[clash], out[pi]];
+    ratioQs = out;
+  } else {
+    let surveyQs = pickFor(mix.s, catRatios, 'ratio', used.s);
+    if (surveyQs.length < 5) surveyQs.push(...rotationPick(RATIO_BANK, 5 - surveyQs.length, 'ratio-any', dayIndex * 5 + off, new Set(surveyQs)));
+    ratioQs = shuffle(surveyQs, rng).slice(0, 5);
+  }
 
   STORAGE_KEY = isPractice ? 'stackle3_practice' : 'stackle3_' + dateStr;
   applySitePalette();
@@ -2888,13 +3156,13 @@ function renderRound() {
     $('round-count').textContent = `${state.round + 1} of 5`;
     $('question-text').textContent = ratioQs[state.round].q;
     $('q-cat').textContent = CATEGORIES[ratioQs[state.round].c]?.name || '';
+    $('q-format').hidden = !ratioQs[state.round].fmt;
+    $('q-format').textContent = FORMAT_NAMES[ratioQs[state.round].fmt] || '';
     $('estimate-ui').hidden = false;
     $('stack-ui').hidden = true;
     $('stability-row').hidden = true;
     $('btn-lock').hidden = false;
-    state.guess = 50;
-    $('slider').value = 50;
-    $('guess-display').innerHTML = '50<span>%</span>';
+    setupSurveyInput(ratioQs[state.round]);
     renderSite($('site-area'), { tilt: 0 });
   } else {
     $('phase-label').textContent = 'Excavate';
@@ -2904,6 +3172,7 @@ function renderRound() {
     $('q-cat').textContent = CATEGORIES[sq.c]?.name || '';
     $('stack-prompt').textContent = sq.prompt;
     $('estimate-ui').hidden = true;
+    $('q-format').hidden = true;
     $('stack-ui').hidden = false;
     $('stability-row').hidden = false;
     state.stackOrder = [...sq.shuffled];
@@ -3036,11 +3305,45 @@ function onDragEnd() {
 }
 
 // ---- SLIDER ----
+// One slider serves all three survey formats: percentage (0–100), year, or a spot on a line (0–100)
+function setupSurveyInput(q) {
+  const f = q.fmt || 'pct', sl = $('slider'), labels = $('slider-labels'), gd = $('guess-display');
+  labels.classList.toggle('pin-ends', f === 'pin');
+  gd.classList.toggle('pin-name', f === 'pin');
+  $('nudge-row').hidden = f !== 'date';
+  if (f === 'date') {
+    const t = dateTier(q.a), mid = Math.round((t.lo + t.hi) / 2);
+    sl.min = t.lo; sl.max = t.hi; state.guess = mid;
+    labels.innerHTML = `<span>${t.lo}</span><span>${mid}</span><span>${t.hi}</span>`;
+  } else if (f === 'pin') {
+    sl.min = 0; sl.max = 100; state.guess = 50;
+    labels.innerHTML = `<span>${q.lo[0]}<small>${fmtNum(q.lo[1], q.u)}</small></span><span>${q.hi[0]}<small>${fmtNum(q.hi[1], q.u)}</small></span>`;
+  } else {
+    sl.min = 0; sl.max = 100; state.guess = 50;
+    labels.innerHTML = '<span>0%</span><span>50%</span><span>100%</span>';
+  }
+  sl.value = state.guess;
+  showGuess();
+}
+function showGuess() {
+  const f = ratioQs[state.round]?.fmt || 'pct';
+  $('guess-display').innerHTML = f === 'date' ? String(state.guess)
+    : f === 'pin' ? escapeHtml(ratioQs[state.round].item)
+    : `${state.guess}<span>%</span>`;
+}
+function escapeHtml(t) { return String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
 $('slider').addEventListener('input', e => {
   if (state.locked) return;
   state.guess = parseInt(e.target.value);
-  $('guess-display').innerHTML = `${state.guess}<span>%</span>`;
+  showGuess();
 });
+[['nudge-down', -1], ['nudge-up', 1]].forEach(([id, step]) => $(id).addEventListener('click', () => {
+  if (state.locked) return;
+  const sl = $('slider');
+  state.guess = Math.min(+sl.max, Math.max(+sl.min, state.guess + step));
+  sl.value = state.guess;
+  showGuess();
+}));
 
 // ---- LOCK IN ----
 // ---- TORCH TIMER ----
@@ -3093,14 +3396,41 @@ function lockIn(timedOut) {
 
 $('btn-lock').addEventListener('click', () => lockIn(false));
 
+// Every format comes down to a 'diff' on the same scale as percentage points, so scoring,
+// layer condition and the share squares work the same for all of them.
+function judgeSurvey(q, g) {
+  const f = q.fmt || 'pct', a = q.a;
+  if (f === 'date') {
+    const t = dateTier(a), yrs = Math.abs(g - a), span = t.hi - t.lo;
+    return { diff: yrs * t.k, gPos: (g - t.lo) / span * 100, aPos: (a - t.lo) / span * 100, gTxt: String(g), aTxt: String(a),
+      offTxt: yrs === 0 ? 'Spot on' : `${yrs} year${yrs === 1 ? '' : 's'} off`, ends: [t.lo, t.hi],
+      line: `Dated ${a} — you said ${g}${yrs === 0 ? ', spot on!' : `, ${yrs} year${yrs === 1 ? '' : 's'} off`}`,
+      detail: `You said ${g}, answer was ${a}` };
+  }
+  if (f === 'pin') {
+    const lo = q.lo[1], hi = q.hi[1], aPos = (a - lo) / (hi - lo) * 100;
+    const d = Math.round(Math.abs(g - aPos));
+    const gTxt = fmtNum(lo + (hi - lo) * g / 100, q.u), aTxt = fmtNum(a, q.u);
+    return { diff: d, gPos: g, aPos, gTxt: '≈ ' + gTxt, aTxt, offTxt: d === 0 ? 'Spot on' : `${d}% of the line off`, ends: [q.lo[0], q.hi[0]],
+      line: `${q.item}: ${aTxt} — ${d === 0 ? 'spot on!' : `you placed it at about ${gTxt}`}`,
+      detail: `You placed it at about ${gTxt}, answer was ${aTxt}` };
+  }
+  const d = Math.abs(g - a);
+  return { diff: d, gPos: g, aPos: a, gTxt: g + '%', aTxt: a + '%', offTxt: d === 0 ? 'Spot on' : d + '% off', ends: null,
+    line: `Answer: ${a}% — you were ${d === 0 ? 'spot on!' : d + '% off'}`,
+    detail: `You guessed ${g}%, answer was ${a}%` };
+}
+
 function lockEstimate() {
-  const answer = ratioQs[state.round].a;
-  const diff = Math.abs(state.guess - answer);
-  const score = Math.max(0, 100 - diff * 3); // 3 points per % off: 10 off = 70, 34+ off = 0
+  const q = ratioQs[state.round];
+  const answer = q.a;
+  const j = judgeSurvey(q, state.guess);
+  const diff = j.diff;
+  const score = Math.max(0, Math.round(100 - diff * 3)); // 3 points per % off: 10 off = 70, 34+ off = 0
   const emoji = diff <= 2 ? '🟩' : diff <= 7 ? '🟨' : diff <= 15 ? '🟧' : '🟥';
 
   const lifeLost = false, lifeWon = false; // timber props were removed
-  state.scores.push({ phase: 'estimate', q: ratioQs[state.round].q, c: ratioQs[state.round].c, guess: state.guess, answer, score, emoji, detail: `You guessed ${state.guess}%, answer was ${answer}%`, lifeLost, lifeWon });
+  state.scores.push({ phase: 'estimate', fmt: q.fmt || 'pct', q: q.q, c: q.c, guess: state.guess, answer, d: diff, gPos: j.gPos, aPos: j.aPos, gTxt: j.gTxt, aTxt: j.aTxt, offTxt: j.offTxt, score, emoji, detail: j.detail, lifeLost, lifeWon });
 
   // Brush away the next layer: its condition comes from how close the guess was.
   // A complete miss (no points) also leaves part of the layer missing.
@@ -3128,15 +3458,17 @@ function lockEstimate() {
 
   showFact(ratioQs[state.round].f);
 
-  $('feedback-detail').textContent = `Answer: ${answer}% — you were ${diff === 0 ? 'spot on!' : diff + '% off'}`;
+  $('feedback-detail').textContent = j.line;
 
+  // Answer label above the bar, yours below, so they never sit on top of each other
+  const clampL = v => Math.min(86, Math.max(14, v));
   const vis = $('feedback-visual');
-  vis.innerHTML = `<div class="feedback-bar" style="margin: 24px 0 32px;">
-    <div class="feedback-marker feedback-guess-marker" style="left:${state.guess}%"></div>
-    <div class="answer-label guess-l" style="left:${state.guess}%">You: ${state.guess}%</div>
-    <div class="feedback-marker feedback-answer-marker" style="left:${answer}%"></div>
-    <div class="answer-label answer-l" style="left:${answer}%;top:${Math.abs(state.guess-answer)<12?'36px':'18px'}">Answer: ${answer}%</div>
-  </div>`;
+  vis.innerHTML = `<div class="feedback-bar" style="margin: 30px 0 32px;">
+    <div class="feedback-marker feedback-answer-marker" style="left:${j.aPos}%"></div>
+    <div class="feedback-marker feedback-guess-marker" style="left:${j.gPos}%"></div>
+    <div class="answer-label answer-l" style="left:${clampL(j.aPos)}%">Answer: ${escapeHtml(j.aTxt)}</div>
+    <div class="answer-label guess-l" style="left:${clampL(j.gPos)}%">You: ${escapeHtml(j.gTxt)}</div>
+  </div>${j.ends ? `<div class="fb-ends"><span>${escapeHtml(j.ends[0])}</span><span>${escapeHtml(j.ends[1])}</span></div>` : ''}`;
   saveState();
 }
 
@@ -3333,13 +3665,16 @@ function showResults() {
 
   // Highlights
   const parsed = est.map(s => {
+    if (s.d !== undefined) return { ...s, off: s.offTxt };
     const m = /guessed (\d+)%, answer was (\d+)%/.exec(s.detail || '');
-    return m ? { ...s, g: +m[1], a: +m[2], d: Math.abs(+m[1] - +m[2]) } : null;
+    if (!m) return null;
+    const d = Math.abs(+m[1] - +m[2]);
+    return { ...s, d, off: d === 0 ? 'Spot on' : `${d}% off` };
   }).filter(Boolean);
   const hl = [];
   if (parsed.length) {
     const best = parsed.reduce((a, b) => (b.d < a.d ? b : a));
-    hl.push(['Closest guess', best.q, best.d === 0 ? 'Spot on' : `${best.d}% off`]);
+    hl.push(['Closest guess', best.q, best.off]);
   }
   if (stk.length) {
     const bestStk = stk.reduce((a, b) => (b.score > a.score ? b : a));
@@ -3363,7 +3698,10 @@ function showResults() {
   $('log-survey').innerHTML = est.map(s => {
     let g = s.guess, a = s.answer;
     if (g === undefined) { const m = /guessed (\d+)%, answer was (\d+)%/.exec(s.detail || ''); if (m) { g = +m[1]; a = +m[2]; } }
-    const d = Math.abs(g - a);
+    let d = Math.abs(g - a), gl = g + '%', al = a + '%', offL = d === 0 ? 'Spot on' : d + ' off';
+    if (s.d !== undefined) { d = s.d; gl = s.gTxt; al = s.aTxt; offL = s.offTxt; }
+    if (s.gPos !== undefined) { g = s.gPos; a = s.aPos; }
+    const gapW = Math.abs(g - a);
     const tone = d <= 7 ? 'var(--success)' : d <= 15 ? 'var(--warn)' : 'var(--miss)';
     const tag = (s.timedOut ? '<span class="lg-tag time">Out of time</span>' : '') + (s.lifeLost ? '<span class="lg-tag lost">Prop snapped</span>' : s.lifeWon ? '<span class="lg-tag won">Prop recovered</span>' : '');
     return `<div class="lg-row">
@@ -3371,11 +3709,11 @@ function showResults() {
       <div class="lg-main">
         <div class="lg-q">${catLabel(catOf(s, RATIO_BANK, 'q'))}${s.q}</div>
         <div class="lg-track">
-          <span class="lg-gap" style="left:${Math.min(g, a)}%;width:${d}%;background:${tone}"></span>
+          <span class="lg-gap" style="left:${Math.min(g, a)}%;width:${gapW}%;background:${tone}"></span>
           <span class="lg-ans" style="left:${a}%"></span>
           <span class="lg-guess" style="left:${g}%"></span>
         </div>
-        <div class="lg-meta"><span>You <b>${g}%</b></span><span>Answer <b>${a}%</b></span><span>${d === 0 ? 'Spot on' : d + ' off'}</span>${tag}</div>
+        <div class="lg-meta">${s.fmt && s.fmt !== 'pct' ? `<span>${FORMAT_NAMES[s.fmt]}</span>` : ''}<span>You <b>${escapeHtml(gl)}</b></span><span>Answer <b>${escapeHtml(al)}</b></span><span>${escapeHtml(offL)}</span>${tag}</div>
       </div>
       <b class="lg-pts" style="color:${ptsColor(s.score)}">${s.score}</b>
     </div>`;
