@@ -1070,7 +1070,7 @@ input[type="range"]::-moz-range-thumb {
   </div>
   <button class="btn-play" id="btn-start">Play</button>
   <button class="btn-link btn-museum" id="btn-museum-open">Visit the museum</button>
-  <button class="btn-link" id="btn-practice-open">Practice dig</button>
+  <button class="btn-link" id="btn-practice-open" hidden>Practice dig</button>
   <div class="practice-picker glass" id="practice-picker" hidden>
     <div class="pp-h">Practice dig</div>
     <div class="pp-sub">Doesn't count towards your streak. Pick a site — the questions are a fresh mix.</div>
@@ -1253,7 +1253,7 @@ input[type="range"]::-moz-range-thumb {
     <div class="share-toast" id="share-toast" role="status">Copied — paste it anywhere</div>
   </section>
   <div class="expedition-footer" id="fr-next">New dig tomorrow.</div>
-  <button class="btn-link" id="btn-practice-again">Play a practice dig</button>
+  <button class="btn-link" id="btn-practice-again" hidden>Play a practice dig</button>
   <div class="practice-picker glass" id="practice-picker-r" hidden>
     <div class="pp-h">Practice dig</div>
     <div class="pp-sub">Doesn't count towards your streak.</div>
@@ -3753,6 +3753,8 @@ function backToDaily() {
 }
 
 $('btn-start').addEventListener('click', () => { renderRound(); });
+// Practice digs are hidden; add ?practice to the address to show them
+if (/[?&]practice\b/.test(location.search)) { $('btn-practice-open').hidden = false; $('btn-practice-again').hidden = false; }
 $('btn-practice-open').addEventListener('click', () => {
   renderPracticePicker();
   $('practice-picker').hidden = !$('practice-picker').hidden;
