@@ -139,6 +139,8 @@ button { font-family: var(--body); cursor: pointer; border: none; }
 .screen.active { display: flex; flex-direction: column; align-items: center; gap: 20px; }
 
 /* Start screen */
+.logo-mark { margin: 0; width: min(320px, 82vw); line-height: 0; }
+.logo-mark svg { width: 100%; height: auto; display: block; border-radius: 0 0 10px 10px; }
 .logo {
   font-family: var(--display); font-size: clamp(2.3rem, 9.5vw, 4rem); text-align: center;
   font-weight: 700; font-style: normal;
@@ -1057,8 +1059,27 @@ input[type="range"]::-moz-range-thumb {
 
 <!-- START SCREEN -->
 <div class="screen active" id="start-screen">
-  <div style="height: 36px"></div>
-  <div class="logo">Carbon Dated</div>
+  <div style="height: 12px"></div>
+  <h1 class="logo-mark">
+    <svg viewBox="0 0 380 260" role="img" aria-label="Carbon Dated">
+      <text x="175" y="82" text-anchor="middle" font-family="Cinzel, Georgia, serif" font-weight="700" font-size="58" letter-spacing="3" fill="#23302C">CARBON</text>
+      <text x="175" y="150" text-anchor="middle" font-family="Cinzel, Georgia, serif" font-weight="700" font-size="58" letter-spacing="3" fill="#23302C">DATED</text>
+      <g transform="translate(330 118) rotate(20)">
+        <rect x="-7" y="-58" width="14" height="44" rx="7" fill="#8B5A3C" stroke="#23302C" stroke-width="2"/>
+        <rect x="-2.5" y="-16" width="5" height="18" fill="#5C6A63" stroke="#23302C" stroke-width="1.5"/>
+        <path d="M 0 0 L 23 12 L 0 78 L -23 12 Z" fill="#B8C2BD" stroke="#23302C" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M 0 2 L 0 70" stroke="#23302C" stroke-width="1.2" opacity="0.5"/>
+      </g>
+      <path d="M 0 152 Q 50 147 100 151 T 200 150 T 300 152 T 380 149 L 380 260 L 0 260 Z" fill="#DCC3A0"/>
+      <path d="M 0 182 Q 70 177 140 181 T 280 180 T 380 182 L 380 260 L 0 260 Z" fill="#C49A76"/>
+      <path d="M 0 208 Q 90 204 190 209 T 380 206 L 380 260 L 0 260 Z" fill="#A86C52"/>
+      <path d="M 0 236 Q 100 232 200 237 T 380 234 L 380 260 L 0 260 Z" fill="#23302C"/>
+      <path d="M 0 152 Q 50 147 100 151 T 200 150 T 300 152 T 380 149" fill="none" stroke="#A9781C" stroke-width="2.5"/>
+      <path d="M 290 151 q 6 -8 14 -6 q 8 -6 14 2" fill="#DCC3A0" stroke="#A9781C" stroke-width="1.5"/>
+      <circle cx="74" cy="221" r="9" fill="#D4A13A" stroke="#A9781C" stroke-width="2"/>
+      <path d="M 214 192 l 12 -5 l 7 7 l -10 6 Z" fill="#A9C7BB" stroke="#3E6F62" stroke-width="1.5"/>
+    </svg>
+  </h1>
   <div class="puzzle-num" id="puzzle-num"></div>
   <div class="theme-line" id="theme-line"></div>
   <div class="site-line" id="site-line"></div>
