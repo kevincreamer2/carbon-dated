@@ -554,6 +554,13 @@ input[type="range"]::-moz-range-thumb {
 .hist-bars .hb.empty { background: transparent; border: 1px dashed var(--glass-border); border-bottom: none; height: 6px !important; }
 .hist-bars .hb.failed { background: var(--miss); }
 .hist-bars .hb.today { background: var(--accent); }
+.feedback-crowd { font-size: 0.82rem; color: var(--fg-muted); text-align: center; }
+.feedback-crowd b { color: var(--fg); }
+.crowd-line { font-size: 1rem; font-weight: 600; text-align: center; color: var(--fg); }
+.crowd-line b { color: var(--accent); }
+.crowd-bars .hb { background: var(--mudbrick); }
+.crowd-bars .hb.mine { background: var(--gold); }
+.crowd-cap { font-size: 0.82rem; color: var(--fg-muted); text-align: center; }
 .hist-caption { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.68rem; color: var(--fg-muted); }
 .feedback-bar { width: 100%; height: 8px; background: var(--glass-border); border-radius: 4px; position: relative; overflow: visible; }
 .feedback-marker { position: absolute; top: -6px; width: 3px; height: 20px; border-radius: 2px; transform: translateX(-50%); }
@@ -1172,6 +1179,7 @@ input[type="range"]::-moz-range-thumb {
     <div class="feedback-score" id="feedback-score"></div>
     <div class="feedback-detail" id="feedback-detail"></div>
     <div class="feedback-note" id="feedback-note" hidden></div>
+    <div class="feedback-crowd" id="feedback-crowd" hidden></div>
     <div class="feedback-layer" id="feedback-layer" hidden></div>
     <div id="feedback-visual" style="width:100%;"></div>
     <div class="feedback-fact" id="feedback-fact" hidden></div>
@@ -1241,6 +1249,14 @@ input[type="range"]::-moz-range-thumb {
         <div><span class="fr-k">Survey</span><b id="fr-est"></b><small>of 500</small></div>
         <div><span class="fr-k">Excavate</span><b id="fr-stk"></b><small>of 500</small></div>
       </div>
+    </section>
+
+    <section class="glass fr-section" id="fr-crowd-wrap" hidden>
+      <h3 class="fr-h">Today's diggers</h3>
+      <div class="crowd-line" id="crowd-line"></div>
+      <div class="hist-bars crowd-bars" id="crowd-bars"></div>
+      <div class="hist-caption"><span>0</span><span>500</span><span>1,000</span></div>
+      <div class="crowd-cap" id="crowd-cap"></div>
     </section>
 
     <section class="glass fr-section">
@@ -3298,6 +3314,7 @@ function renderRound() {
   $('btn-lock').disabled = false;
   $('feedback-fact').hidden = true;
   $('feedback-note').hidden = true;
+  $('feedback-crowd').hidden = true;
   $('feedback-layer').hidden = true;
   state.locked = false;
   $('game-screen').classList.remove('is-locked');
@@ -3601,6 +3618,7 @@ function lockIn(timedOut) {
   if (state.phase === 'estimate') lockEstimate();
   else if (stackQs[state.round].kind && stackQs[state.round].kind !== 'strata') lockPick();
   else lockStack();
+  showCrowdLine();
   if (timedOut) {
     const last = state.scores[state.scores.length - 1];
     if (last) { last.timedOut = true; saveState(); }
@@ -3839,6 +3857,79 @@ function renderNextDig() {
   $('fr-next').textContent = ms <= 0 ? 'A new dig is open. Reload to start.' : `Next dig opens in ${h}h ${m}m`;
 }
 
+// ---- TODAY'S DIGGERS: anonymous daily scores, shared through the Carbon Dated Worker ----
+const CROWD_API = 'https://carbon-dated.kevincreamer2.workers.dev';
+let crowd = null; // { players, standing, bucket, buckets, totals, rounds: [{ n, median, pctOk }] }
+function deviceId() {
+  try {
+    let d = localStorage.getItem('cd_device');
+    if (!d) {
+      d = ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/[^A-Za-z0-9_-]/g, '');
+      localStorage.setItem('cd_device', d);
+    }
+    return d;
+  } catch (e) { return null; }
+}
+async function fetchCrowd() {
+  if (isPractice) return;
+  try { const r = await fetch(CROWD_API + '/api/stats?date=' + dateStr); if (r.ok) crowd = await r.json(); } catch (e) {}
+}
+// What each round contributes: survey guesses as numbers, excavation rounds as right or not
+function crowdRounds() {
+  return state.scores.map(s => s.phase === 'estimate' ? { v: Number(s.guess), ok: null } : { v: null, ok: s.score === 100 ? 1 : 0 });
+}
+async function sendScore() {
+  if (isPractice || !state.finished) return;
+  const device = deviceId();
+  if (!device) return;
+  try {
+    const r = await fetch(CROWD_API + '/api/score', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: dateStr, device, total: Math.min(1000, summarise(state).total), standing: !state.towerCollapsed, rounds: crowdRounds() }),
+    });
+    if (r.ok) crowd = await r.json();
+  } catch (e) {}
+}
+// One line under a revealed answer, once a few people have played that round
+function crowdLineFor(idx) {
+  const r = crowd && crowd.rounds && crowd.rounds[idx];
+  if (!r || r.n < 3) return '';
+  const s = state.scores[idx];
+  if (s.phase === 'estimate') {
+    if (r.median === null) return '';
+    const q = ratioQs[idx], f = q.fmt || 'pct';
+    const said = f === 'date' ? String(Math.round(r.median))
+      : f === 'pin' ? '≈ ' + fmtNum(q.lo[1] + (q.hi[1] - q.lo[1]) * r.median / 100, q.u)
+      : Math.round(r.median) + '%';
+    return `The typical digger said <b>${said}</b>`;
+  }
+  if (r.pctOk === null) return '';
+  return s.kind === 'strata' ? `<b>${r.pctOk}%</b> of diggers catalogued this perfectly` : `<b>${r.pctOk}%</b> of diggers got this one`;
+}
+function showCrowdLine() {
+  const el = $('feedback-crowd');
+  const html = isPractice ? '' : crowdLineFor(state.scores.length - 1);
+  el.innerHTML = html; el.hidden = !html;
+}
+function renderCrowd() {
+  const wrap = $('fr-crowd-wrap');
+  if (isPractice || !crowd || !crowd.players) { wrap.hidden = true; return; }
+  wrap.hidden = false;
+  const mine = Math.min(1000, summarise(state).total), n = crowd.players;
+  let line;
+  if (n === 1) line = 'You\'re the first digger today. Check back later to see how you compare.';
+  else if (crowd.totals) {
+    const below = crowd.totals.filter(t => t < mine).length;
+    const pct = Math.round(below / (n - 1) * 100);
+    line = pct > 0 ? `You beat <b>${Math.min(100, pct)}%</b> of today's ${n.toLocaleString('en-GB')} diggers` : `A tough dig: the other ${(n - 1).toLocaleString('en-GB')} diggers all scored at least as well`;
+  } else line = `${n.toLocaleString('en-GB')} diggers so far today`;
+  $('crowd-line').innerHTML = line;
+  const b = crowd.buckets.slice(0, 20); b[19] += crowd.buckets[20] || 0;
+  const top = Math.max(...b, 1), myB = Math.min(19, Math.floor(mine / crowd.bucket));
+  $('crowd-bars').innerHTML = b.map((c, i) => `<div class="hb${i === myB ? ' mine' : ''}" style="height:${c ? Math.max(8, c / top * 100) : 0}%" title="${i * crowd.bucket}–${i * crowd.bucket + crowd.bucket - 1}: ${c}"></div>`).join('');
+  $('crowd-cap').textContent = crowd.standing === null ? '' : `${crowd.standing}% of diggers kept today's site standing`;
+}
+
 function showResults() {
   showScreen('results-screen');
   setPalette(13);
@@ -4002,6 +4093,10 @@ function showResults() {
       <b class="lg-pts" style="color:${ptsColor(s.score)}">${s.score}</b>
     </div>`;
   }).join('');
+
+  // Today's diggers: show what's known now, then send this dig and refresh
+  renderCrowd();
+  if (!isPractice) sendScore().then(renderCrowd);
 
   // History & streak
   renderHistory(recordResult());
@@ -4396,6 +4491,7 @@ function routeDaily() {
 }
 
 buildPuzzle(null);
+fetchCrowd();
 backfillHistory();
 routeDaily();
 </script>
