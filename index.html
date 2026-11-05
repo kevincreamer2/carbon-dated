@@ -3911,6 +3911,13 @@ function showCrowdLine() {
   const html = isPractice ? '' : crowdLineFor(state.scores.length - 1);
   el.innerHTML = html; el.hidden = !html;
 }
+// Where this dig sits among today's diggers: { n, beat (% of the others you beat), top (% band you're in) }
+function crowdRank() {
+  if (isPractice || !crowd || !crowd.totals || crowd.players < 2) return null;
+  const mine = Math.min(1000, summarise(state).total), n = crowd.players;
+  const below = crowd.totals.filter(t => t < mine).length, above = crowd.totals.filter(t => t > mine).length;
+  return { n, beat: Math.min(100, Math.round(below / (n - 1) * 100)), top: Math.max(1, Math.round((above + 1) / n * 100)) };
+}
 function renderCrowd() {
   const wrap = $('fr-crowd-wrap');
   if (isPractice || !crowd || !crowd.players) { wrap.hidden = true; return; }
@@ -4214,8 +4221,12 @@ function buildShareText() {
   else if (fst === 'escaped') lines.push('🏺 The artefact stayed buried');
   lines.push('');
   lines.push(`${total.toLocaleString('en-GB')} / 1,000${state.provenance ? ' (+50)' : ''} · ${state.failed ? 'Dig failed' : getSurveyRating(total)}`);
+  // How it ranks today, once enough people have played for it to mean something
+  const rank = crowdRank();
+  if (rank && rank.n >= 5) lines.push(rank.top <= 50 ? `🏆 Top ${rank.top}% of ${rank.n.toLocaleString('en-GB')} diggers today` : `⛏ Beat ${rank.beat}% of ${rank.n.toLocaleString('en-GB')} diggers today`);
   const streak = isPractice ? 0 : streakStats(loadHistory()).cur;
   if (streak > 1) lines.push(`🔥 ${streak}-day streak`);
+  if (!isPractice) { lines.push(''); lines.push('playcarbondated.com'); }
   return lines.join('\n');
 }
 
