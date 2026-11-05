@@ -2611,20 +2611,76 @@ const puzzleNum = Math.round((today - EPOCH) / 86400000) + 1;
 const dateStr = localKey(today); // local date, so the dig changes at local midnight (BST-safe)
 const dayIndex = Math.max(0, Math.round((today - EPOCH) / 86400000));
 
-// No-repeat rotation: walk through a fixed shuffle of the pool, a fresh shuffle each full cycle,
-// so nothing comes back until everything in that pool has been used.
-const permCache = {};
+// ---- QUESTION ROTATION & LEGACY BANK ----
+// Every question is asked once. Each pool has a fixed play order: the original questions (no `b`)
+// in one fixed shuffle, then each later batch of new questions (`b: 2`, `b: 3`…) queued after it.
+// So to top a bank up, add questions anywhere with the next batch number: nothing already
+// scheduled moves. Anything before today's position is retired to the legacy bank. If a pool runs
+// dry it replays its legacy bank, oldest first, and logs a warning. Check with bankRunway().
+const orderCache = {};
+function playOrder(pool, key) {
+  const ck = key + '#' + pool.length;
+  if (orderCache[ck]) return orderCache[ck];
+  const batches = [...new Set(pool.map(q => q.b || 1))].sort((a, b) => a - b);
+  const order = [];
+  batches.forEach(b => {
+    const items = pool.filter(q => (q.b || 1) === b);
+    const perm = shuffle([...Array(items.length).keys()], seededRNG(hashDate(key + (b === 1 ? ':0' : ':b' + b))));
+    order.push(...perm.map(i => items[i]));
+  });
+  return (orderCache[ck] = order);
+}
+const warnedDry = new Set();
 function rotationPick(pool, count, key, start, exclude) {
-  const N = pool.length, out = [];
+  const order = playOrder(pool, key), N = order.length, out = [];
   if (!N) return out;
   for (let p = start, guard = 0; out.length < count && guard < N * 3; p++, guard++) {
-    const cyc = Math.floor(p / N), ck = key + ':' + cyc;
-    const perm = permCache[ck] || (permCache[ck] = shuffle([...Array(N).keys()], seededRNG(hashDate(ck))));
-    const item = pool[perm[p % N]];
+    if (p >= N && !isPractice && !warnedDry.has(key)) {
+      warnedDry.add(key);
+      console.warn('Carbon Dated: the "' + key + '" bank has run out of new questions and is replaying its legacy bank');
+    }
+    const item = order[p % N];
     if (!out.includes(item) && !(exclude && exclude.has(item))) out.push(item);
   }
   return out;
 }
+// When each bank runs out of new questions. Walks the daily schedule forward from launch,
+// counting what each pool hands out. Run bankRunway() in the browser console.
+function bankRunway(maxDays = 730) {
+  const pools = {};
+  const pool = (k, size) => pools[k] || (pools[k] = { size, used: 0, today: 0, runsOut: null });
+  const take = (k, size, n, key) => {
+    const p = pool(k, size);
+    p.used += n;
+    if (!p.runsOut && p.used > p.size) p.runsOut = key;
+  };
+  for (let i = 0; i < maxDays; i++) {
+    const d = new Date(EPOCH); d.setDate(d.getDate() + i);
+    const key = localKey(d), m = dayMix(key);
+    if (i === dayIndex) Object.values(pools).forEach(p => { p.today = p.used; });
+    if (key < FORMAT_START) m.s.forEach(c => take('Percentage: ' + CATEGORIES[c].name, catRatios(c).length, 1, key));
+    else {
+      surveyFormats(key).forEach((f, j) => {
+        if (f === 'pct' && fmtPool('pct', m.s[j]).length) take('Percentage: ' + CATEGORIES[m.s[j]].name, fmtPool('pct', m.s[j]).length, 1, key);
+      });
+      take('Carbon date it', DATE_BANK.length, 2, key);
+      take('Pinpoint', PIN_BANK.length, 1, key);
+    }
+    (key >= TRENCH_START ? m.k.slice(0, 2) : m.k).forEach(c => take('Strata: ' + CATEGORIES[c].name, catStacks(c).length, 1, key));
+    if (key >= TRENCH_START) {
+      take('Intrusive find', INTRUSIVE_BANK.length, 1, key);
+      take('Forgery', FORGERY_BANK.length, 1, key);
+      take('Pick the pair', PAIR_BANK.length, 1, key);
+    }
+  }
+  const rows = Object.entries(pools).map(([name, p]) => ({
+    bank: name, total: p.size, legacy: Math.min(p.today, p.size), left: Math.max(0, p.size - p.today),
+    runsOut: p.runsOut || 'over ' + Math.round(maxDays / 30) + ' months away',
+  })).sort((a, b) => String(a.runsOut).localeCompare(String(b.runsOut)));
+  if (typeof console.table === 'function') console.table(rows);
+  return rows;
+}
+if (typeof window !== 'undefined') window.bankRunway = bankRunway;
 
 let ratioQs = [], stackQs = [], puzzleTheme = null, isPractice = false, practiceSite = null;
 let forger = null; // today's hidden artefact, if there is one: { round, fake (the find that never existed), real, why, prompt, decoys, artefact }
