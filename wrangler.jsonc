@@ -1,0 +1,9 @@
+{
+  // Carbon Dated score service: collects anonymous daily scores and serves the crowd stats.
+  // The game itself is still served by GitHub Pages; this only runs the /api endpoints.
+  "name": "carbon-dated",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true
+  // The D1 database binding ("DB") is added here once the database exists.
+}
