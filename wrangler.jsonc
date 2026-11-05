@@ -4,6 +4,8 @@
   "name": "carbon-dated",
   "main": "worker/index.js",
   "compatibility_date": "2026-11-01",
-  "workers_dev": true
-  // The D1 database binding ("DB") is added here once the database exists.
+  "workers_dev": true,
+  "d1_databases": [
+    { "binding": "DB", "database_name": "carbon-dated", "database_id": "d6fa1491-c53e-4e4f-891b-138cd7f546bc" }
+  ]
 }
