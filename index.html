@@ -546,6 +546,12 @@ input[type="range"]::-moz-range-thumb {
   font-size: 0.82rem; font-weight: 600; color: var(--fg); background: var(--glass);
   border: 1px solid var(--glass-border); border-radius: 999px; padding: 4px 12px;
 }
+.rank-box { display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; }
+.rank-promo { font-family: var(--display); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: #fff; background: var(--accent); border-radius: 999px; padding: 4px 12px; }
+.rank-name { font-family: var(--display); font-weight: 700; font-size: 1.15rem; color: var(--ink); }
+.rank-bar { width: 100%; height: 8px; border-radius: 4px; background: var(--glass-border); overflow: hidden; }
+.rank-fill { height: 100%; background: linear-gradient(90deg, var(--clay), var(--gold)); border-radius: 4px; }
+.rank-todo { font-size: 0.8rem; color: var(--fg-muted); }
 .hist-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; }
 .hist-stats b { display: block; font-family: var(--display); font-size: 1.5rem; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
 .hist-stats span { font-size: 0.68rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
@@ -1107,6 +1113,7 @@ input[type="range"]::-moz-range-thumb {
   <div class="theme-line" id="theme-line"></div>
   <div class="site-line" id="site-line"></div>
   <div class="streak-chip" id="streak-chip" hidden></div>
+  <div class="streak-chip rank-chip" id="rank-chip" hidden></div>
   <div class="divider"></div>
   <div class="tagline">Survey, then excavate. Ten rounds to uncover today's ancient site, and keep it standing.</div>
   <div class="build-stamp">Build 5 Nov · 20:45</div>
@@ -1280,6 +1287,7 @@ input[type="range"]::-moz-range-thumb {
 
     <section class="glass fr-section" id="fr-history-wrap">
       <h3 class="fr-h">Your digs</h3>
+      <div class="rank-box" id="rank-box"></div>
       <div class="hist-stats" id="hist-stats"></div>
       <div class="hist-bars" id="hist-bars"></div>
       <div class="hist-forger" id="hist-forger" hidden></div>
@@ -4170,12 +4178,49 @@ function streakStats(h) {
   return { played: keys.length, cur, best, avg };
 }
 
+// ---- DIGGER RANKS ----
+// Earned from your recent average (last 10 digs, out of 1,000) plus enough digs played.
+// A rank once earned is kept, so one bad day never demotes anyone.
+const DIGGER_RANKS = [
+  { name: 'Volunteer', avg: 0, digs: 0 },
+  { name: 'Trench Digger', avg: 300, digs: 2 },
+  { name: 'Site Assistant', avg: 450, digs: 3 },
+  { name: 'Field Archaeologist', avg: 600, digs: 5 },
+  { name: 'Site Supervisor', avg: 720, digs: 10 },
+  { name: 'Director of Excavations', avg: 820, digs: 20 },
+];
+function recentAvg(h, keys) {
+  const r = keys.slice(-10);
+  return r.length ? Math.round(r.reduce((a, k) => a + h[k].total * 1000 / (h[k].max || 1400), 0) / r.length) : 0;
+}
+function rankFor(avg, played) {
+  let i = 0;
+  DIGGER_RANKS.forEach((r, j) => { if (avg >= r.avg && played >= r.digs) i = j; });
+  return i;
+}
+// before: only count digs before this date (to spot a promotion today)
+function diggerRank(h, before) {
+  const keys = Object.keys(h).sort().filter(k => !before || k < before);
+  let best = 0;
+  for (let n = 1; n <= keys.length; n++) best = Math.max(best, rankFor(recentAvg(h, keys.slice(0, n)), n));
+  const avg = recentAvg(h, keys), next = DIGGER_RANKS[best + 1];
+  return { i: best, name: DIGGER_RANKS[best].name, next, avg, played: keys.length,
+    needAvg: next ? Math.max(0, next.avg - avg) : 0, needDigs: next ? Math.max(0, next.digs - keys.length) : 0 };
+}
+function rankPromotedToday(h) {
+  if (isPractice || !h[dateStr]) return null;
+  const was = diggerRank(h, dateStr), now = diggerRank(h);
+  return now.i > was.i ? now.name : null;
+}
+
 function renderStreakChip() {
   const s = streakStats(loadHistory());
   const chip = $('streak-chip');
   if (s.cur > 0) { chip.textContent = `🔥 ${s.cur}-day streak — keep it going`; chip.hidden = false; }
   else if (s.played > 0) { chip.textContent = `Best streak: ${s.best} day${s.best === 1 ? '' : 's'}`; chip.hidden = false; }
   else chip.hidden = true;
+  const h = loadHistory(), rc = $('rank-chip');
+  if (Object.keys(h).length) { rc.textContent = '🎖 ' + diggerRank(h).name; rc.hidden = false; } else rc.hidden = true;
 }
 
 function renderHistory(h) {
@@ -4194,6 +4239,16 @@ function renderHistory(h) {
     bars.push(`<div class="${cls}" style="height:${pct}%" title="${label}: ${r.total}${r.failed ? ' (failed)' : ''}"></div>`);
   }
   $('hist-bars').innerHTML = bars.join('');
+  // Digger rank and how far to the next one
+  const rk = diggerRank(h), promo = rankPromotedToday(h);
+  const prog = !rk.next ? 100 : Math.max(4, Math.min(100, Math.round(
+    Math.min(rk.avg / rk.next.avg, rk.next.digs ? rk.played / rk.next.digs : 1) * 100)));
+  const todo = !rk.next ? 'The top rank. Keep digging to hold your average.'
+    : [rk.needAvg ? `an average ${rk.needAvg} higher` : '', rk.needDigs ? `${rk.needDigs} more dig${rk.needDigs === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ') + ` for ${rk.next.name}`;
+  $('rank-box').innerHTML = `${promo ? `<div class="rank-promo">Promoted to ${promo}!</div>` : ''}
+    <div class="rank-name">🎖 ${rk.name}</div>
+    <div class="rank-bar"><div class="rank-fill" style="width:${prog}%"></div></div>
+    <div class="rank-todo">Average ${rk.avg} over your last ${Math.min(10, rk.played)} dig${rk.played === 1 ? '' : 's'} · ${rk.next ? (todo.charAt(0).toUpperCase() + todo.slice(1)) : todo}</div>`;
   const fd = Object.values(h).filter(r => r.forger === 'unmasked' || r.forger === 'fooled');
   $('hist-forger').hidden = fd.length === 0;
   $('hist-forger').textContent = `Artefacts uncovered: ${fd.filter(r => r.forger === 'unmasked').length} of ${fd.length}`;
@@ -4226,6 +4281,8 @@ function buildShareText() {
   if (rank && rank.n >= 5) lines.push(rank.top <= 50 ? `🏆 Top ${rank.top}% of ${rank.n.toLocaleString('en-GB')} diggers today` : `⛏ Beat ${rank.beat}% of ${rank.n.toLocaleString('en-GB')} diggers today`);
   const streak = isPractice ? 0 : streakStats(loadHistory()).cur;
   if (streak > 1) lines.push(`🔥 ${streak}-day streak`);
+  const promo = isPractice ? null : rankPromotedToday(loadHistory());
+  if (promo) lines.push(`🎖 Promoted to ${promo}`);
   if (!isPractice) { lines.push(''); lines.push('playcarbondated.com'); }
   return lines.join('\n');
 }
