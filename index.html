@@ -1036,7 +1036,7 @@ input[type="range"]::-moz-range-thumb {
   <div class="how-to glass">
     <div class="how-row"><div class="how-icon">🎯</div><div><strong>Survey (rounds 1–5)</strong><br>Five quick guesses: two percentages, two <em>Carbon date it</em> years and one <em>Pinpoint</em> on a line. Each answer brushes away a layer of the mound. The closer you are, the better the ruin underneath has survived.</div></div>
     <div class="how-row"><div class="how-icon">⛏</div><div><strong>Excavate (rounds 6–10)</strong><br>Five trenches. Two are <em>Strata</em>: put five finds in order — drag, or tap two to swap. The others are an <em>Intrusive find</em> (spot the one that doesn't belong), a <em>Forgery</em> (spot the fake label) and <em>Pick the pair</em> (tap the two that share a link — a match steadies the site). Mistakes knock pieces out of the ruin; at 0% stability it caves in.</div></div>
-    <div class="how-row"><div class="how-icon">🔥</div><div><strong>The torch</strong><br>You get 20 seconds for each survey question, 60 for a Strata trench and 30 for the others. When the torch burns out, whatever you've set is locked in.</div></div>
+    <div class="how-row"><div class="how-icon">🔥</div><div><strong>The torch</strong><br>You get 15 seconds for each survey question, 45 for a Strata trench and 30 for the others. When the torch burns out, whatever you've set is locked in.</div></div>
   </div>
   <button class="btn-play" id="btn-start">Play</button>
   <button class="btn-link btn-museum" id="btn-museum-open">Visit the museum</button>
@@ -3421,8 +3421,8 @@ $('slider').addEventListener('input', e => {
 // ---- TORCH TIMER ----
 // 20s per survey question, 60s per excavation round. The deadline is saved, so leaving
 // the page or refreshing doesn't stop the clock; when it runs out, the current answer locks in.
-const ROUND_SECONDS = { estimate: 20, stack: 60, tap: 30 };
-// Strata trenches get the full minute; the single-tap trenches get half that
+const ROUND_SECONDS = { estimate: 15, stack: 45, tap: 30 };
+// Strata trenches get 45s; the single-tap trenches get 30s
 function roundSeconds() {
   if (state.phase !== 'stack') return ROUND_SECONDS.estimate;
   const k = stackQs[state.round] && stackQs[state.round].kind;
