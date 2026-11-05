@@ -1259,10 +1259,10 @@ input[type="range"]::-moz-range-thumb {
     </section>
 
     <section class="glass fr-section" id="fr-crowd-wrap" hidden>
-      <h3 class="fr-h">Today's diggers</h3>
+      <h3 class="fr-h">How you compare</h3>
       <div class="crowd-line" id="crowd-line"></div>
       <div class="hist-bars crowd-bars" id="crowd-bars"></div>
-      <div class="hist-caption"><span>0</span><span>500</span><span>1,000</span></div>
+      <div class="hist-caption" id="crowd-axis"><span>0</span><span>500</span><span>1,000</span></div>
       <div class="crowd-cap" id="crowd-cap"></div>
     </section>
 
@@ -3901,7 +3901,7 @@ async function sendScore() {
 // One line under a revealed answer, once a few people have played that round
 function crowdLineFor(idx) {
   const r = crowd && crowd.rounds && crowd.rounds[idx];
-  if (!r || r.n < 3) return '';
+  if (!r || r.n < 5) return '';
   const s = state.scores[idx];
   if (s.phase === 'estimate') {
     if (r.median === null) return '';
@@ -3920,29 +3920,46 @@ function showCrowdLine() {
   el.innerHTML = html; el.hidden = !html;
 }
 // Where this dig sits among today's diggers: { n, beat (% of the others you beat), top (% band you're in) }
+// While a day is quiet, compare against every dig ever played; from DAILY_MIN players a day, against today only
+const DAILY_MIN = 20, CHART_MIN = 10;
+function crowdPool() {
+  if (isPractice || !crowd) return null;
+  if (crowd.players >= DAILY_MIN && crowd.totals) {
+    const mine = Math.min(1000, summarise(state).total);
+    return { mode: 'day', n: crowd.players, below: crowd.totals.filter(t => t < mine).length, above: crowd.totals.filter(t => t > mine).length, buckets: crowd.buckets, standing: crowd.standing };
+  }
+  const a = crowd.all;
+  if (!a || a.below === null || a.below === undefined) return null;
+  return { mode: 'all', n: a.players, below: a.below, above: a.above, buckets: a.buckets, standing: a.standing };
+}
 function crowdRank() {
-  if (isPractice || !crowd || !crowd.totals || crowd.players < 2) return null;
-  const mine = Math.min(1000, summarise(state).total), n = crowd.players;
-  const below = crowd.totals.filter(t => t < mine).length, above = crowd.totals.filter(t => t > mine).length;
-  return { n, beat: Math.min(100, Math.round(below / (n - 1) * 100)), top: Math.max(1, Math.round((above + 1) / n * 100)) };
+  const p = crowdPool();
+  if (!p || p.n < 2) return null;
+  return { mode: p.mode, n: p.n, beat: Math.min(100, Math.round(p.below / (p.n - 1) * 100)), top: Math.max(1, Math.round((p.above + 1) / p.n * 100)) };
 }
 function renderCrowd() {
-  const wrap = $('fr-crowd-wrap');
-  if (isPractice || !crowd || !crowd.players) { wrap.hidden = true; return; }
+  const wrap = $('fr-crowd-wrap'), p = crowdPool();
+  if (!p || !p.n) { wrap.hidden = true; return; }
   wrap.hidden = false;
-  const mine = Math.min(1000, summarise(state).total), n = crowd.players;
+  const mine = Math.min(1000, summarise(state).total), n = p.n, fmt = x => x.toLocaleString('en-GB');
+  const pct = n > 1 ? Math.min(100, Math.round(p.below / (n - 1) * 100)) : 0;
   let line;
-  if (n === 1) line = 'You\'re the first digger today. Check back later to see how you compare.';
-  else if (crowd.totals) {
-    const below = crowd.totals.filter(t => t < mine).length;
-    const pct = Math.round(below / (n - 1) * 100);
-    line = pct > 0 ? `You beat <b>${Math.min(100, pct)}%</b> of today's ${n.toLocaleString('en-GB')} diggers` : `A tough dig: the other ${(n - 1).toLocaleString('en-GB')} diggers all scored at least as well`;
-  } else line = `${n.toLocaleString('en-GB')} diggers so far today`;
+  if (p.mode === 'day') line = pct > 0 ? `You beat <b>${pct}%</b> of today's ${fmt(n)} diggers` : `A tough dig: the other ${fmt(n - 1)} diggers all scored at least as well`;
+  else if (n === 1) line = 'You\'re one of the very first diggers. Check back soon to see how you compare.';
+  else if (p.above === 0) line = `Your ${mine} is the <b>best dig</b> played so far`;
+  else line = pct > 0 ? `Your ${mine} beats <b>${pct}%</b> of all ${fmt(n)} digs played so far` : `A tough dig: every other dig so far scored at least as well`;
   $('crowd-line').innerHTML = line;
-  const b = crowd.buckets.slice(0, 20); b[19] += crowd.buckets[20] || 0;
-  const top = Math.max(...b, 1), myB = Math.min(19, Math.floor(mine / crowd.bucket));
-  $('crowd-bars').innerHTML = b.map((c, i) => `<div class="hb${i === myB ? ' mine' : ''}" style="height:${c ? Math.max(8, c / top * 100) : 0}%" title="${i * crowd.bucket}–${i * crowd.bucket + crowd.bucket - 1}: ${c}"></div>`).join('');
-  $('crowd-cap').textContent = crowd.standing === null ? '' : `${crowd.standing}% of diggers kept today's site standing`;
+  // The score spread only once there's enough to look like one
+  const showChart = n >= CHART_MIN;
+  $('crowd-bars').hidden = $('crowd-axis').hidden = !showChart;
+  if (showChart) {
+    const b = p.buckets.slice(0, 20); b[19] += p.buckets[20] || 0;
+    const top = Math.max(...b, 1), myB = Math.min(19, Math.floor(mine / crowd.bucket));
+    $('crowd-bars').innerHTML = b.map((c, i) => `<div class="hb${i === myB ? ' mine' : ''}" style="height:${c ? Math.max(8, c / top * 100) : 0}%" title="${i * crowd.bucket}–${i * crowd.bucket + crowd.bucket - 1}: ${c}"></div>`).join('');
+  }
+  const today = p.mode === 'all' && crowd.players > 0 ? `${fmt(crowd.players)} digger${crowd.players === 1 ? '' : 's'} today` : '';
+  const stand = p.standing === null || n < CHART_MIN ? '' : p.mode === 'day' ? `${p.standing}% of diggers kept today's site standing` : `${p.standing}% of all digs kept their site standing`;
+  $('crowd-cap').textContent = [today, stand].filter(Boolean).join(' · ');
 }
 
 function showResults() {
@@ -4278,7 +4295,10 @@ function buildShareText() {
   lines.push(`${total.toLocaleString('en-GB')} / 1,000${state.provenance ? ' (+50)' : ''} · ${state.failed ? 'Dig failed' : getSurveyRating(total)}`);
   // How it ranks today, once enough people have played for it to mean something
   const rank = crowdRank();
-  if (rank && rank.n >= 5) lines.push(rank.top <= 50 ? `🏆 Top ${rank.top}% of ${rank.n.toLocaleString('en-GB')} diggers today` : `⛏ Beat ${rank.beat}% of ${rank.n.toLocaleString('en-GB')} diggers today`);
+  if (rank && rank.n >= CHART_MIN) {
+    const who = rank.mode === 'day' ? `${rank.n.toLocaleString('en-GB')} diggers today` : 'all digs so far';
+    lines.push(rank.top <= 50 ? `🏆 Top ${rank.top}% of ${who}` : `⛏ Beat ${rank.beat}% of ${who}`);
+  }
   const streak = isPractice ? 0 : streakStats(loadHistory()).cur;
   if (streak > 1) lines.push(`🔥 ${streak}-day streak`);
   const promo = isPractice ? null : rankPromotedToday(loadHistory());

@@ -52,10 +52,10 @@ async function postScore(req, env) {
   await ensureSchema(env.DB);
   await env.DB.prepare(`INSERT OR IGNORE INTO scores (date, device, total, standing, rounds, created) VALUES (?, ?, ?, ?, ?, ?)`)
     .bind(date, device, Math.round(total), standing ? 1 : 0, JSON.stringify(clean), Date.now()).run();
-  return getStats(req, env, date);
+  return getStats(req, env, date, Math.round(total));
 }
 
-async function getStats(req, env, date) {
+async function getStats(req, env, date, mine = null) {
   if (!isDate(date)) return json(req, { error: 'bad date' }, 400);
   await ensureSchema(env.DB);
   const { results } = await env.DB.prepare(`SELECT total, standing, rounds FROM scores WHERE date = ?`).bind(date).all();
@@ -83,7 +83,16 @@ async function getStats(req, env, date) {
       pctOk: p.okN ? Math.round((p.ok / p.okN) * 100) : null,
     };
   });
-  return json(req, { date, players, standing: players ? Math.round((standing / players) * 100) : null, bucket: BUCKET, buckets, totals: players <= 2000 ? totals : undefined, rounds },
+  // Every dig ever played, for while a single day is still quiet
+  const agg = await env.DB.prepare(`SELECT COUNT(*) AS n, SUM(standing) AS st,
+      SUM(CASE WHEN total < ?1 THEN 1 ELSE 0 END) AS below, SUM(CASE WHEN total > ?1 THEN 1 ELSE 0 END) AS above FROM scores`)
+    .bind(mine === null ? -1 : mine).first();
+  const { results: ab } = await env.DB.prepare(`SELECT MIN(total / ${BUCKET}, ${Math.ceil(1000 / BUCKET)}) AS b, COUNT(*) AS c FROM scores GROUP BY b`).all();
+  const allBuckets = new Array(Math.ceil(1000 / BUCKET) + 1).fill(0);
+  ab.forEach(r => { allBuckets[r.b] = r.c; });
+  const all = { players: agg.n || 0, standing: agg.n ? Math.round((agg.st / agg.n) * 100) : null, buckets: allBuckets,
+    below: mine === null ? null : agg.below || 0, above: mine === null ? null : agg.above || 0 };
+  return json(req, { date, all, players, standing: players ? Math.round((standing / players) * 100) : null, bucket: BUCKET, buckets, totals: players <= 2000 ? totals : undefined, rounds },
     200, { 'Cache-Control': 'public, max-age=30' });
 }
 
@@ -95,7 +104,10 @@ export default {
     if (!env.DB) return json(req, { error: 'database not connected yet' }, 503);
     try {
       if (url.pathname === '/api/score' && req.method === 'POST') return await postScore(req, env);
-      if (url.pathname === '/api/stats' && req.method === 'GET') return await getStats(req, env, url.searchParams.get('date'));
+      if (url.pathname === '/api/stats' && req.method === 'GET') {
+        const t = Number(url.searchParams.get('total'));
+        return await getStats(req, env, url.searchParams.get('date'), Number.isFinite(t) && url.searchParams.has('total') ? Math.round(t) : null);
+      }
     } catch (e) {
       return json(req, { error: 'server error' }, 500);
     }
