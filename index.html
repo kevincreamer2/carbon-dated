@@ -179,6 +179,32 @@ button { font-family: var(--body); cursor: pointer; border: none; }
   text-align: center; line-height: 1.4; color: var(--fg);
 }
 
+
+/* ---- FIT EACH ROUND ON ONE SCREEN ---- */
+#game-screen.screen.active { gap: 12px; padding-block: 12px; }
+#game-screen .question-card { padding: 16px; gap: 12px; }
+#game-screen .question-text { font-size: 1.1rem; line-height: 1.3; }
+#game-screen .guess-display { font-size: 2.4rem; }
+#game-screen .stack-item { padding: 8px 12px; min-height: 0; }
+#game-screen .stack-item .grip { padding: 0; line-height: 1; }
+#game-screen .stack-feedback-item { padding: 8px 12px; }
+#game-screen .stack-items { gap: 5px; }
+#game-screen .feedback { gap: 8px; }
+#game-screen .feedback-score { font-size: 1.6rem; line-height: 1; }
+#game-screen .feedback-fact { padding: 8px 10px; font-size: 0.84rem; }
+#game-screen .torch { margin-bottom: -4px; }
+#game-screen .pick-item, #game-screen .fg-item, #game-screen .pp-item { padding-block: 8px; min-height: 40px; }
+#game-screen .stack-prompt { margin-bottom: 0; }
+/* Once a survey answer is locked in, the result bar shows the guess, so the slider steps aside */
+#game-screen.is-locked #estimate-ui { display: none; }
+/* Results: tighter rows and a slimmer heading card so the field note and Next stay in view */
+#game-screen.is-locked .question-card { padding: 10px 16px; gap: 8px; }
+#game-screen.is-locked .stack-feedback-item { padding: 5px 12px; min-height: 0; }
+#game-screen.is-locked .feedback { gap: 6px; }
+#game-screen.is-locked .feedback-score { font-size: 1.4rem; }
+/* In the excavation the heading already names the trench, so the badge and the how-to line give way */
+#game-screen[data-phase="stack"] #q-format, #game-screen[data-phase="stack"] .stack-hint:not(.warn) { display: none; }
+
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
@@ -3061,7 +3087,10 @@ function fitSite(el, factor) {
   const wrap = el.querySelector('.site-wrap'), scene = el.querySelector('.site');
   if (!wrap) return;
   const avail = el.clientWidth || SCENE_W;
-  const s = Math.min(1, avail / SCENE_W) * factor;
+  // Keep the dig to about a fifth of the screen height so each round fits without scrolling
+  const share = $('game-screen').dataset.phase === 'stack' ? 0.19 : 0.22; // the excavation has the stability bar above it
+  const tall = el.id === 'site-area' ? Math.min(1, (window.innerHeight * share) / SCENE_H) : 1;
+  const s = Math.min(1, avail / SCENE_W, tall) * factor;
   wrap.style.width = (SCENE_W * s) + 'px';
   wrap.style.height = (SCENE_H * s) + 'px';
   scene.style.transform = `scale(${s})`;
@@ -3225,6 +3254,8 @@ function renderRound() {
   $('feedback-note').hidden = true;
   $('feedback-layer').hidden = true;
   state.locked = false;
+  $('game-screen').classList.remove('is-locked');
+  $('game-screen').dataset.phase = state.phase;
   selectedIdx = null;
   applySitePalette();
 
@@ -3518,6 +3549,7 @@ function lockIn(timedOut) {
   if (dragState) onDragEnd(); // a find mid-drag drops where it is
   pending = null; selectedIdx = null;
   state.locked = true;
+  $('game-screen').classList.add('is-locked');
   stopTorch();
   $('btn-lock').hidden = true;
   if (state.phase === 'estimate') lockEstimate();
