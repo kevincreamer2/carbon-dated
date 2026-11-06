@@ -503,6 +503,25 @@ input[type="range"]::-moz-range-thumb {
 /* Structure shifts — the ground moves */
 @keyframes siteShift { 0% { transform: translateY(0); } 30% { transform: translateY(2px); } 60% { transform: translateX(-2px) translateY(1px); } 100% { transform: translate(0); } }
 
+/* Tap item press — stone tile pushed in */
+@keyframes tilePress { 0% { transform: scale(1); } 50% { transform: scale(0.95) translateY(1px); } 100% { transform: scale(1); } }
+/* Lock-in commitment — the control locks firm */
+@keyframes lockCommit { 0% { transform: scale(1); opacity: 1; } 40% { transform: scale(0.96); opacity: 0.7; } 100% { transform: scale(0.92); opacity: 0; } }
+/* Dust spec drifting off a fresh layer */
+@keyframes dustDrift { 0% { transform: translate(0, 0) scale(1); opacity: 0.6; } 100% { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; } }
+/* Strata item dust puff on landing */
+@keyframes dustPuff { 0% { transform: scaleX(0.3); opacity: 0.5; } 100% { transform: scaleX(1.5); opacity: 0; } }
+/* Wrong strata item sinks after verdict */
+@keyframes itemSink { 0% { transform: translateY(0); } 100% { transform: translateY(3px); opacity: 0.7; } }
+/* Round transition — content settles in */
+@keyframes roundSettle { 0% { transform: translateY(6px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+/* Report row reveal — like field notes being filled */
+@keyframes reportRow { 0% { transform: translateY(4px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+/* Final site settle on report */
+@keyframes finalSettle { 0% { transform: translateY(-3px); } 50% { transform: translateY(1px); } 100% { transform: translateY(0); } }
+/* Stability crack overlay */
+@keyframes crackAppear { 0% { opacity: 0; } 100% { opacity: 1; } }
+
 .anim-hidden { opacity: 0 !important; }
 /* Pin type */
 .anim-pin-drop { animation: pinDrop 0.28s cubic-bezier(.45,.05,.55,.95) both; }
@@ -519,7 +538,22 @@ input[type="range"]::-moz-range-thumb {
 .anim-item-reveal { animation: itemSettle 0.22s cubic-bezier(.25,.1,.25,1) both; }
 .anim-crumble-fall { animation: crumbleFall 0.6s cubic-bezier(.55,.05,.68,.53) both; pointer-events: none; }
 .anim-site-hit { animation: siteShift 0.25s ease-out; }
+.anim-tile-press { animation: tilePress 0.15s ease both; }
+.anim-lock-commit { animation: lockCommit 0.25s ease both; pointer-events: none; }
+.anim-item-sink { animation: itemSink 0.3s ease both; }
+.anim-round-settle { animation: roundSettle 0.35s ease both; }
+.anim-report-row { animation: reportRow 0.3s ease both; }
+.anim-final-settle { animation: finalSettle 0.4s ease both; }
 .feedback-gap-fill { position: absolute; top: 0; height: 8px; border-radius: 4px; transform-origin: left; animation: gapSweep 0.35s cubic-bezier(.25,.1,.25,1) both; }
+/* Dust specs — small absolute particles */
+.dust-spec { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--fg-muted); pointer-events: none; animation: dustDrift 0.8s ease-out both; }
+/* Dust puff under strata items */
+.dust-puff { position: absolute; bottom: -2px; left: 10%; right: 10%; height: 3px; background: var(--fg-muted); border-radius: 50%; pointer-events: none; animation: dustPuff 0.4s ease-out both; opacity: 0; }
+/* Site stability cracks */
+.site-cracks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
+.site-crack { position: absolute; background: var(--fg-muted); opacity: 0; animation: crackAppear 0.3s ease both; }
+.site-crack.h { width: 20px; height: 1px; }
+.site-crack.v { width: 1px; height: 14px; }
 
 /* Swatches (logs, feedback, report) */
 .swatch{display:inline-block;flex:none;width:26px;height:18px;box-sizing:border-box;border:1.5px solid #23302C;border-radius:2px;background-color:var(--stone);background-image:var(--crack,none);box-shadow:var(--glow)}
@@ -3176,7 +3210,7 @@ function buildSite(el) {
   el._site = key;
   el.innerHTML = `<div class="site-wrap"><div class="site" role="img" aria-label="${site.name}">
     <div class="site-strata"></div><div class="site-struct"></div><div class="site-debris"></div><div class="site-sed"></div>
-    <div class="site-ground"></div><div class="site-dust"></div><div class="stamp-c">CAVE-IN</div></div></div>`;
+    <div class="site-ground"></div><div class="site-dust"></div><div class="site-cracks"></div><div class="stamp-c">CAVE-IN</div></div></div>`;
   const struct = el.querySelector('.site-struct');
   el._pieces = {}; el._bands = []; el._geo = {}; el._debris = {};
   let below = site.bands.reduce((a, b) => a + b.h, 0);
@@ -3255,6 +3289,22 @@ function renderSite(el, view = {}) {
     const puff = document.createElement('span');
     puff.className = 'puff'; puff.setAttribute('aria-hidden', 'true');
     el._bands[view.freshBand].appendChild(puff);
+    // Dust specs drift off the freshly uncovered layer
+    const bandEl = el._bands[view.freshBand];
+    const bw = bandEl.offsetWidth || 120;
+    for (let d = 0; d < 5; d++) {
+      const spec = document.createElement('span');
+      spec.className = 'dust-spec';
+      spec.style.left = (10 + Math.random() * 80) + '%';
+      spec.style.top = (Math.random() * 60) + '%';
+      spec.style.setProperty('--dx', (Math.random() * 30 - 15) + 'px');
+      spec.style.setProperty('--dy', (10 + Math.random() * 20) + 'px');
+      spec.style.animationDelay = (d * 0.08) + 's';
+      spec.style.width = (2 + Math.random() * 2) + 'px';
+      spec.style.height = spec.style.width;
+      bandEl.appendChild(spec);
+      setTimeout(() => spec.remove(), 1200);
+    }
     setTimeout(() => { puff.remove(); el._bands[view.freshBand] && el._bands[view.freshBand].classList.remove('fresh'); }, 1200);
   }
   // Sediment covers every band not yet uncovered; a domed mound until the first answer
@@ -3281,11 +3331,19 @@ function siteTilt() {
   return s > 60 ? 0 : s > 30 ? -2 : s > 0 ? -4 : -4;
 }
 
+let lastStability = null;
 function updateStabilityUI() {
   const fill = $('stability-fill');
   const pct = $('stability-pct');
   const s = Math.max(0, Math.min(100, state.towerStability));
+  // Site settles visibly when stability drops
+  if (lastStability !== null && s < lastStability) {
+    const site = $('site-area');
+    if (site) { site.classList.remove('anim-site-hit'); site.offsetHeight; site.classList.add('anim-site-hit'); }
+  }
+  lastStability = s;
   fill.style.width = s + '%';
+  fill.style.transition = 'width 0.4s ease';
   pct.textContent = s + '%';
   if (s > 60) { fill.style.background = 'var(--success)'; pct.style.color = 'var(--success)'; }
   else if (s > 30) { fill.style.background = 'var(--warn)'; pct.style.color = 'var(--warn)'; }
@@ -3336,6 +3394,21 @@ function excavate(offsets, bonus = 0) {
   state.towerStability = Math.max(0, Math.min(100, state.towerStability));
   updateStabilityUI();
   renderSite($('site-area'), { justHit, justBroken, tilt: siteTilt() });
+  // Add hairline cracks when wrong answers damage the site
+  if (wrongCount > 0) {
+    const cracksEl = $('site-area').querySelector('.site-cracks');
+    if (cracksEl) {
+      for (let c = 0; c < wrongCount; c++) {
+        const crack = document.createElement('div');
+        crack.className = 'site-crack ' + (Math.random() > 0.5 ? 'h' : 'v');
+        crack.style.left = (15 + Math.random() * 70) + '%';
+        crack.style.top = (10 + Math.random() * 70) + '%';
+        crack.style.animationDelay = (c * 0.1) + 's';
+        crack.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
+        cracksEl.appendChild(crack);
+      }
+    }
+  }
   saveState();
   routeAfterPulls();
 }
@@ -3388,10 +3461,11 @@ function renderRound() {
   selectedIdx = null;
   applySitePalette();
 
+  // Round transition: content settles in rather than instant swap
   const card = $('question-card');
   card.style.animation = 'none';
   card.offsetHeight;
-  card.style.animation = '';
+  card.style.animation = 'roundSettle 0.35s ease both';
 
   if (state.phase === 'estimate') {
     $('phase-label').textContent = 'Survey';
@@ -3473,6 +3547,9 @@ function renderPickItems() {
 function onPick(idx) {
   if (state.locked) return;
   const need = TRENCH_COPY[stackQs[state.round].kind].need;
+  // Tactile press on the tapped item
+  const btn = $('stack-items').children[idx];
+  if (btn) { btn.classList.remove('anim-tile-press'); btn.offsetHeight; btn.classList.add('anim-tile-press'); }
   if (state.picks.includes(idx)) state.picks = state.picks.filter(i => i !== idx);
   else state.picks = need === 1 ? [idx] : [...state.picks, idx].slice(-need); // a third tap drops the oldest pick
   $('stack-hint').textContent = TRENCH_COPY[stackQs[state.round].kind].hint;
@@ -3709,7 +3786,10 @@ function lockIn(timedOut) {
   state.locked = true;
   $('game-screen').classList.add('is-locked');
   stopTorch();
-  $('btn-lock').hidden = true;
+  // Lock-in commitment: the button locks firm and fades
+  const lockBtn = $('btn-lock');
+  lockBtn.classList.add('anim-lock-commit');
+  setTimeout(() => { lockBtn.hidden = true; lockBtn.classList.remove('anim-lock-commit'); }, 250);
   animQueue = [];
   animFinalize = null;
   if (state.phase === 'estimate') lockEstimate();
@@ -3897,11 +3977,19 @@ function lockStack() {
 
   startAnimSequence();
 
-  // Stagger reveals: each item 200ms apart
+  // Stagger reveals: each item 200ms apart with dust puff on landing
   userOrder.forEach((item, i) => {
     queueAnim(50 + i * 200, () => {
       const el = $('anim-strata-' + i);
-      if (el) { el.classList.remove('anim-hidden'); el.classList.add('anim-item-reveal'); }
+      if (el) {
+        el.classList.remove('anim-hidden'); el.classList.add('anim-item-reveal');
+        // Dust puff on landing
+        el.style.position = 'relative';
+        const puff = document.createElement('span');
+        puff.className = 'dust-puff';
+        el.appendChild(puff);
+        setTimeout(() => puff.remove(), 500);
+      }
       // Each wrong find shakes the site area
       if (offsets[i] >= 2) {
         const site = $('site-area');
@@ -3910,8 +3998,16 @@ function lockStack() {
     });
   });
 
-  // Score pops after all items revealed
-  queueAnim(50 + userOrder.length * 200 + 150, () => {
+  // After all items: wrong ones sink, then score settles
+  queueAnim(50 + userOrder.length * 200 + 100, () => {
+    userOrder.forEach((item, i) => {
+      if (offsets[i] >= 2) {
+        const el = $('anim-strata-' + i);
+        if (el) el.classList.add('anim-item-sink');
+      }
+    });
+  });
+  queueAnim(50 + userOrder.length * 200 + 300, () => {
     $('feedback-score').classList.remove('anim-hidden');
     $('feedback-score').classList.add('anim-score-settle');
     $('feedback-detail').classList.remove('anim-hidden');
@@ -4368,6 +4464,18 @@ function showResults() {
       <b class="lg-pts" style="color:${ptsColor(s.score)}">${s.score}</b>
     </div>`;
   }).join('');
+
+  // Stagger log row reveals — like a field report being filled in
+  const allLogRows = [...($('log-survey').querySelectorAll('.lg-row')), ...($('log-stack')?.querySelectorAll('.lg-row') || [])];
+  allLogRows.forEach((row, i) => {
+    row.style.opacity = '0';
+    row.style.animation = `reportRow 0.3s ease ${0.1 + i * 0.08}s both`;
+  });
+  // Final site settle on the report
+  const resultSite = $('result-site');
+  if (resultSite) {
+    resultSite.style.animation = `finalSettle 0.4s ease ${0.1 + allLogRows.length * 0.08}s both`;
+  }
 
   // Today's diggers: show what's known now, then send this dig and refresh
   renderCrowd();
