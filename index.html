@@ -467,6 +467,25 @@ input[type="range"]::-moz-range-thumb {
 @keyframes siteDust{0%{opacity:0;transform:translateY(30px) scale(.6)}35%{opacity:1}100%{opacity:0;transform:translateY(-24px) scale(1.3)}}
 @keyframes stampIn{0%{opacity:0;transform:translateX(-50%) rotate(-6deg) scale(1.5)}100%{opacity:1;transform:translateX(-50%) rotate(-6deg) scale(1)}}
 
+/* Lock-in animation juice */
+@keyframes pinDrop { 0% { transform: translateX(-50%) translateY(-20px) scaleY(1.3); opacity: 0; } 60% { transform: translateX(-50%) translateY(2px) scaleY(0.9); opacity: 1; } 100% { transform: translateX(-50%) translateY(0) scaleY(1); opacity: 1; } }
+@keyframes pinRise { 0% { transform: translateX(-50%) translateY(10px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
+@keyframes labelPop { 0% { transform: translateX(-50%) scale(0.7); opacity: 0; } 60% { transform: translateX(-50%) scale(1.06); } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
+@keyframes gapFlash { 0% { opacity: 0; height: 0; } 30% { opacity: 1; height: 8px; } 100% { opacity: 0.7; height: 8px; } }
+@keyframes scorePop { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes itemReveal { 0% { transform: translateX(-8px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+@keyframes crumbleFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 30% { transform: translateY(-4px) rotate(-2deg); } 100% { transform: translateY(60px) rotate(12deg); opacity: 0; } }
+@keyframes siteHit { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+.anim-hidden { opacity: 0 !important; }
+.anim-pin-drop { animation: pinDrop 0.18s cubic-bezier(.2,1.4,.4,1) both; }
+.anim-pin-rise { animation: pinRise 0.22s ease-out both; }
+.anim-label-pop { animation: labelPop 0.2s ease-out both; }
+.anim-score-pop { animation: scorePop 0.3s cubic-bezier(.2,1.4,.4,1) both; }
+.anim-item-reveal { animation: itemReveal 0.2s ease-out both; }
+.anim-crumble-fall { animation: crumbleFall 0.45s ease-in both; pointer-events: none; }
+.anim-site-hit { animation: siteHit 0.15s ease-in-out; }
+.feedback-gap-fill { position: absolute; top: 0; height: 8px; border-radius: 4px; animation: gapFlash 0.35s ease-out both; }
+
 /* Swatches (logs, feedback, report) */
 .swatch{display:inline-block;flex:none;width:26px;height:18px;box-sizing:border-box;border:1.5px solid #23302C;border-radius:2px;background-color:var(--stone);background-image:var(--crack,none);box-shadow:var(--glow)}
 .swatch.cond-crumbling{border-style:dashed}
@@ -3324,6 +3343,10 @@ function renderRound() {
   $('feedback-note').hidden = true;
   $('feedback-crowd').hidden = true;
   $('feedback-layer').hidden = true;
+  // Clean up animation classes from previous round
+  $('feedback-score').className = 'feedback-score';
+  $('feedback-detail').className = 'feedback-detail';
+  animQueue = []; animFinalize = null;
   state.locked = false;
   $('game-screen').classList.remove('is-locked');
   $('game-screen').dataset.phase = state.phase;
@@ -3614,6 +3637,26 @@ function tickTorch() {
   if (left <= 0) lockIn(true);
 }
 
+// ---- ANIMATION QUEUE (skip system) ----
+let animQueue = []; // { timer, fn } — pending animation steps
+let animFinalize = null; // called to instantly show final state
+
+function queueAnim(delayMs, fn) {
+  const timer = setTimeout(() => {
+    animQueue = animQueue.filter(a => a.timer !== timer);
+    fn();
+  }, delayMs);
+  animQueue.push({ timer, fn });
+}
+
+function skipAnims() {
+  // Clear all pending timers and run their callbacks immediately
+  const pending = [...animQueue];
+  animQueue = [];
+  pending.forEach(a => { clearTimeout(a.timer); a.fn(); });
+  if (animFinalize) { animFinalize(); animFinalize = null; }
+}
+
 function lockIn(timedOut) {
   if (state.locked) return;
   if (!timedOut && pickIncomplete()) return;
@@ -3623,6 +3666,8 @@ function lockIn(timedOut) {
   $('game-screen').classList.add('is-locked');
   stopTorch();
   $('btn-lock').hidden = true;
+  animQueue = [];
+  animFinalize = null;
   if (state.phase === 'estimate') lockEstimate();
   else if (stackQs[state.round].kind && stackQs[state.round].kind !== 'strata') lockPick();
   else lockStack();
@@ -3671,8 +3716,7 @@ function lockEstimate() {
 
   state.scores.push({ phase: 'estimate', fmt: q.fmt || 'pct', q: q.q, c: q.c, guess: state.guess, answer, d: diff, gPos: j.gPos, aPos: j.aPos, gTxt: j.gTxt, aTxt: j.aTxt, offTxt: j.offTxt, score, emoji, detail: j.detail });
 
-  // Brush away the next layer: its condition comes from how close the guess was.
-  // A complete miss (no points) also leaves part of the layer missing.
+  // Compute layer condition immediately (state must be correct for skip)
   const bi = state.siteConds.length;
   const band = currentSite().bands[bi];
   const cond = condFor(diff);
@@ -3684,30 +3728,66 @@ function lockEstimate() {
     [n - 1, 0].slice(0, miss).forEach(pi => { state.pieceDmg[bi + '-' + pi] = 1; });
     lost = miss;
   }
-  renderSite($('site-area'), { freshBand: bi, tilt: 0 });
-  if (band) {
-    const fl = $('feedback-layer');
-    fl.innerHTML = `<span class="swatch cond-${cond}"></span><span>Uncovered: the ${band.name}, ${cond}${lost ? `, and ${lost === 1 ? 'a chunk has' : 'two chunks have'} broken off` : ''}</span>`;
-    fl.hidden = false;
-  }
 
+  // Build the visual with markers hidden, ready for staggered reveal
+  const clampL = v => Math.min(86, Math.max(14, v));
+  const gapL = Math.min(j.gPos, j.aPos), gapR = Math.max(j.gPos, j.aPos);
+  const gapColor = score >= 80 ? 'var(--success)' : score >= 50 ? 'var(--warn)' : 'var(--miss)';
+  const vis = $('feedback-visual');
+  vis.innerHTML = `<div class="feedback-bar" style="margin: 30px 0 32px;">
+    <div class="feedback-gap-fill anim-hidden" id="anim-gap" style="left:${gapL}%;width:${gapR - gapL}%;background:${gapColor};"></div>
+    <div class="feedback-marker feedback-guess-marker anim-hidden" id="anim-guess-pin" style="left:${j.gPos}%"></div>
+    <div class="feedback-marker feedback-answer-marker anim-hidden" id="anim-answer-pin" style="left:${j.aPos}%"></div>
+    <div class="answer-label answer-l anim-hidden" id="anim-answer-label" style="left:${clampL(j.aPos)}%">Answer: ${escapeHtml(j.aTxt)}</div>
+    <div class="answer-label guess-l anim-hidden" id="anim-guess-label" style="left:${clampL(j.gPos)}%">You: ${escapeHtml(j.gTxt)}</div>
+  </div>${j.ends ? `<div class="fb-ends"><span>${escapeHtml(j.ends[0])}</span><span>${escapeHtml(j.ends[1])}</span></div>` : ''}`;
+
+  // Show feedback area with score/detail hidden initially
   const fb = $('feedback-area'); fb.hidden = false;
+  $('feedback-score').classList.add('anim-hidden');
+  $('feedback-detail').classList.add('anim-hidden');
+  $('feedback-detail').textContent = j.line;
   $('feedback-score').textContent = `+${score}`;
   $('feedback-score').style.color = score >= 80 ? 'var(--success)' : score >= 50 ? 'var(--warn)' : 'var(--miss)';
+  $('btn-next').hidden = false;
 
   showFact(ratioQs[state.round].f);
 
-  $('feedback-detail').textContent = j.line;
+  // Beat 1 (0ms): Your guess pin drops and sticks
+  queueAnim(0, () => {
+    const gp = $('anim-guess-pin');
+    if (gp) { gp.classList.remove('anim-hidden'); gp.classList.add('anim-pin-drop'); }
+    const gl = $('anim-guess-label');
+    if (gl) { gl.classList.remove('anim-hidden'); gl.classList.add('anim-label-pop'); }
+  });
 
-  // Answer label above the bar, yours below, so they never sit on top of each other
-  const clampL = v => Math.min(86, Math.max(14, v));
-  const vis = $('feedback-visual');
-  vis.innerHTML = `<div class="feedback-bar" style="margin: 30px 0 32px;">
-    <div class="feedback-marker feedback-answer-marker" style="left:${j.aPos}%"></div>
-    <div class="feedback-marker feedback-guess-marker" style="left:${j.gPos}%"></div>
-    <div class="answer-label answer-l" style="left:${clampL(j.aPos)}%">Answer: ${escapeHtml(j.aTxt)}</div>
-    <div class="answer-label guess-l" style="left:${clampL(j.gPos)}%">You: ${escapeHtml(j.gTxt)}</div>
-  </div>${j.ends ? `<div class="fb-ends"><span>${escapeHtml(j.ends[0])}</span><span>${escapeHtml(j.ends[1])}</span></div>` : ''}`;
+  // Beat 2 (200ms): Answer pin rises up
+  queueAnim(200, () => {
+    const ap = $('anim-answer-pin');
+    if (ap) { ap.classList.remove('anim-hidden'); ap.classList.add('anim-pin-rise'); }
+    const al = $('anim-answer-label');
+    if (al) { al.classList.remove('anim-hidden'); al.classList.add('anim-label-pop'); }
+  });
+
+  // Beat 3 (400ms): Gap flashes colour + score pops
+  queueAnim(400, () => {
+    const gap = $('anim-gap');
+    if (gap) gap.classList.remove('anim-hidden');
+    $('feedback-score').classList.remove('anim-hidden');
+    $('feedback-score').classList.add('anim-score-pop');
+    $('feedback-detail').classList.remove('anim-hidden');
+  });
+
+  // Beat 4 (750ms): Layer brushes in
+  queueAnim(750, () => {
+    renderSite($('site-area'), { freshBand: bi, tilt: 0 });
+    if (band) {
+      const fl = $('feedback-layer');
+      fl.innerHTML = `<span class="swatch cond-${cond}"></span><span>Uncovered: the ${band.name}, ${cond}${lost ? `, and ${lost === 1 ? 'a chunk has' : 'two chunks have'} broken off` : ''}</span>`;
+      fl.hidden = false;
+    }
+  });
+
   saveState();
 }
 
@@ -3723,18 +3803,22 @@ function lockStack() {
 
   state.scores.push({ phase: 'stack', kind: 'strata', q: sq.prompt, c: sq.c, score, emoji, offsets, detail: `${exact} exact · ${near} one off` });
 
+  // Show feedback area with score hidden initially
   const fb = $('feedback-area'); fb.hidden = false;
   $('feedback-score').textContent = `+${score}`;
   $('feedback-score').style.color = score >= 80 ? 'var(--success)' : score >= 40 ? 'var(--warn)' : 'var(--miss)';
+  $('feedback-score').classList.add('anim-hidden');
   $('feedback-detail').textContent = near ? `${exact} exact, ${near} one place off` : `${exact} of 5 exactly right`;
+  $('feedback-detail').classList.add('anim-hidden');
 
+  // Build items all hidden, then reveal one by one
   const vis = $('feedback-visual');
   vis.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px;width:100%;">' +
     userOrder.map((item, i) => {
       const d = offsets[i];
       const cls = d === 0 ? 'correct' : d === 1 ? 'near' : 'wrong';
       const mark = d === 0 ? '✓' : d === 1 ? '~' : '✗';
-      return `<div class="stack-feedback-item ${cls}">
+      return `<div class="stack-feedback-item ${cls} anim-hidden" id="anim-strata-${i}">
         <div class="result-mark">${mark}</div>
         <div class="item-text">${item}</div>
         ${d ? `<div class="correct-pos">belongs #${sq.correct.indexOf(item) + 1}</div>` : ''}
@@ -3744,9 +3828,30 @@ function lockStack() {
   $('stack-ui').hidden = true;
   $('question-text').textContent = sq.prompt;
   showFact(sq.f);
+  $('btn-next').hidden = false;
 
-  // Misplaced finds knock pieces out of the site
-  excavate(offsets);
+  // Stagger reveals: each item 200ms apart
+  userOrder.forEach((item, i) => {
+    queueAnim(i * 200, () => {
+      const el = $('anim-strata-' + i);
+      if (el) { el.classList.remove('anim-hidden'); el.classList.add('anim-item-reveal'); }
+      // Each wrong find shakes the site area
+      if (offsets[i] >= 2) {
+        const site = $('site-area');
+        if (site) { site.classList.remove('anim-site-hit'); site.offsetHeight; site.classList.add('anim-site-hit'); }
+      }
+    });
+  });
+
+  // Score pops after all items revealed
+  queueAnim(userOrder.length * 200 + 100, () => {
+    $('feedback-score').classList.remove('anim-hidden');
+    $('feedback-score').classList.add('anim-score-pop');
+    $('feedback-detail').classList.remove('anim-hidden');
+    // Run excavation damage after reveals complete
+    excavate(offsets);
+  });
+
   saveState();
 }
 
@@ -3769,27 +3874,97 @@ function lockPick() {
   }[sq.kind];
   state.scores.push({ phase: 'stack', kind: sq.kind, q: isPair ? sq.answer.map(i => sq.items[i]).join(' & ') : sq.prompt, c: sq.c, score, emoji, offsets, picks, answer: sq.answer, hits, detail: head });
 
+  // Show feedback area with score hidden initially
   const fb = $('feedback-area'); fb.hidden = false;
   $('feedback-score').textContent = `+${score}`;
   $('feedback-score').style.color = score >= 80 ? 'var(--success)' : score >= 40 ? 'var(--warn)' : 'var(--miss)';
+  $('feedback-score').classList.add('anim-hidden');
   $('feedback-detail').textContent = head;
+  $('feedback-detail').classList.add('anim-hidden');
   const tag = { intrusive: 'intruder', forgery: 'forged', pair: 'the pair' }[sq.kind];
-  $('feedback-visual').innerHTML = '<div style="display:flex;flex-direction:column;gap:6px;width:100%;">' +
+
+  // Build all items initially dimmed
+  $('feedback-visual').innerHTML = '<div style="display:flex;flex-direction:column;gap:6px;width:100%;" id="anim-pick-list">' +
     sq.items.map((item, i) => {
       const isAns = sq.answer.includes(i), picked = picks.includes(i);
-      if (!isAns && !picked) return `<div class="stack-feedback-item dim"><div class="result-mark"></div><div class="item-text">${escapeHtml(item)}</div></div>`;
-      const cls = isAns ? (picked ? 'correct' : 'near') : 'wrong';
-      const mark = isAns ? (picked ? '✓' : '!') : '✗';
-      return `<div class="stack-feedback-item ${cls}"><div class="result-mark">${mark}</div><div class="item-text">${escapeHtml(item)}</div>${isAns ? `<div class="correct-pos">${tag}</div>` : ''}</div>`;
+      // Start: all items show as dim/neutral
+      return `<div class="stack-feedback-item dim" id="anim-pick-${i}" data-is-ans="${isAns}" data-picked="${picked}"><div class="result-mark"></div><div class="item-text">${escapeHtml(item)}</div></div>`;
     }).join('') + '</div>';
+
   const note = $('feedback-note');
-  note.hidden = !(isPair && right);
-  if (isPair && right) { note.className = 'feedback-note won'; note.textContent = `A matched pair steadies the site: +${PAIR_RESTORE}% stability`; }
+  note.hidden = true;
 
   $('stack-ui').hidden = true;
   $('question-text').textContent = sq.kind === 'pair' ? 'Pick the pair' : sq.prompt;
   showFact(sq.f);
-  excavate(offsets, isPair && right ? PAIR_RESTORE : 0);
+  $('btn-next').hidden = false;
+
+  // Beat 1 (150ms): All options dim except your pick(s) — focus attention
+  queueAnim(150, () => {
+    picks.forEach(pi => {
+      const el = $('anim-pick-' + pi);
+      if (el) { el.classList.remove('dim'); el.style.transition = 'opacity 0.15s, border-color 0.15s, background 0.15s'; }
+    });
+  });
+
+  // Beat 2 (400ms): Your pick(s) flash ✓ or ✗
+  queueAnim(400, () => {
+    picks.forEach(pi => {
+      const el = $('anim-pick-' + pi);
+      if (!el) return;
+      const isAns = sq.answer.includes(pi);
+      const cls = isAns ? 'correct' : 'wrong';
+      const mark = isAns ? '✓' : '✗';
+      el.className = `stack-feedback-item ${cls}`;
+      el.querySelector('.result-mark').textContent = mark;
+      el.classList.add('anim-item-reveal');
+      if (isAns) {
+        const pos = document.createElement('div');
+        pos.className = 'correct-pos'; pos.textContent = tag;
+        el.appendChild(pos);
+      }
+      // Wrong pick shakes site
+      if (!isAns) {
+        const site = $('site-area');
+        if (site) { site.classList.remove('anim-site-hit'); site.offsetHeight; site.classList.add('anim-site-hit'); }
+      }
+    });
+  });
+
+  // Beat 3 (700ms): If wrong, correct answer highlights / pair crumble
+  queueAnim(700, () => {
+    sq.items.forEach((item, i) => {
+      const el = $('anim-pick-' + i);
+      if (!el) return;
+      const isAns = sq.answer.includes(i), picked = picks.includes(i);
+      if (isAns && !picked) {
+        // Correct answer the player missed — highlight it
+        el.className = 'stack-feedback-item near';
+        el.querySelector('.result-mark').textContent = '!';
+        el.classList.add('anim-item-reveal');
+        const pos = document.createElement('div');
+        pos.className = 'correct-pos'; pos.textContent = tag;
+        el.appendChild(pos);
+      } else if (!isAns && !picked && isPair && !right) {
+        // Pair trench: wrong items crumble and fall
+        el.classList.add('anim-crumble-fall');
+      }
+    });
+  });
+
+  // Beat 4 (1000ms): Score + stability
+  queueAnim(1000, () => {
+    $('feedback-score').classList.remove('anim-hidden');
+    $('feedback-score').classList.add('anim-score-pop');
+    $('feedback-detail').classList.remove('anim-hidden');
+    if (isPair && right) {
+      note.hidden = false;
+      note.className = 'feedback-note won';
+      note.textContent = `A matched pair steadies the site: +${PAIR_RESTORE}% stability`;
+    }
+    excavate(offsets, isPair && right ? PAIR_RESTORE : 0);
+  });
+
   saveState();
 }
 
@@ -3800,7 +3975,10 @@ function showFact(text) {
 }
 
 // ---- NEXT ----
-$('btn-next').addEventListener('click', () => advance());
+$('btn-next').addEventListener('click', () => {
+  if (animQueue.length) { skipAnims(); return; }
+  advance();
+});
 
 function advance() {
   state.locked = false;
