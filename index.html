@@ -521,6 +521,10 @@ input[type="range"]::-moz-range-thumb {
 @keyframes finalSettle { 0% { transform: translateY(-3px); } 50% { transform: translateY(1px); } 100% { transform: translateY(0); } }
 /* Stability crack overlay */
 @keyframes crackAppear { 0% { opacity: 0; } 100% { opacity: 1; } }
+/* Item crack — diagonal fracture across a wrong answer */
+@keyframes itemCrack { 0% { transform: scaleX(0); opacity: 0; } 40% { opacity: 0.4; } 100% { transform: scaleX(1); opacity: 0.3; } }
+/* Survey bar fracture — the bar itself cracks on a bad answer */
+@keyframes barFracture { 0% { transform: scaleY(0); opacity: 0; } 100% { transform: scaleY(1); opacity: 0.5; } }
 
 .anim-hidden { opacity: 0 !important; }
 /* Pin type */
@@ -554,6 +558,16 @@ input[type="range"]::-moz-range-thumb {
 .site-crack { position: absolute; background: var(--fg-muted); opacity: 0; animation: crackAppear 0.3s ease both; }
 .site-crack.h { width: 20px; height: 1px; }
 .site-crack.v { width: 1px; height: 14px; }
+/* Item crack overlays — fractures across wrong answer cards */
+.item-crack { position: absolute; pointer-events: none; background: var(--miss); border-radius: 1px; transform-origin: left; animation: itemCrack 0.3s ease both; }
+.item-crack.diag { height: 1.5px; top: 50%; left: 8%; width: 84%; transform-origin: left; }
+.item-crack.diag-a { transform: rotate(-8deg) scaleX(0); animation: itemCrack 0.3s ease 0.05s both; }
+.item-crack.diag-b { transform: rotate(5deg) scaleX(0); top: 40%; left: 15%; width: 55%; animation: itemCrack 0.3s ease 0.12s both; }
+.item-crack.diag-c { transform: rotate(-12deg) scaleX(0); top: 62%; left: 5%; width: 40%; animation: itemCrack 0.3s ease 0.18s both; }
+/* Survey bar fracture lines */
+.bar-fracture { position: absolute; width: 1.5px; background: var(--miss); border-radius: 1px; transform-origin: top; animation: barFracture 0.25s ease both; }
+.stack-feedback-item.wrong, .stack-feedback-item.near { position: relative; overflow: hidden; }
+.feedback-bar { position: relative; }
 
 /* Swatches (logs, feedback, report) */
 .swatch{display:inline-block;flex:none;width:26px;height:18px;box-sizing:border-box;border:1.5px solid #23302C;border-radius:2px;background-color:var(--stone);background-image:var(--crack,none);box-shadow:var(--glow)}
@@ -3778,6 +3792,34 @@ function skipAnims() {
   if (animFinalize) { animFinalize(); animFinalize = null; }
 }
 
+// Add crack fracture lines to a wrong-answer element
+function addItemCracks(el, count) {
+  if (!el) return;
+  el.style.position = 'relative'; el.style.overflow = 'hidden';
+  const classes = ['diag-a', 'diag-b', 'diag-c'];
+  for (let c = 0; c < Math.min(count, 3); c++) {
+    const crack = document.createElement('div');
+    crack.className = 'item-crack diag ' + classes[c];
+    el.appendChild(crack);
+  }
+}
+
+// Add fracture lines to the feedback bar on a bad survey answer
+function addBarFractures(barEl, score) {
+  if (!barEl || score >= 50) return;
+  const count = score <= 10 ? 3 : score <= 30 ? 2 : 1;
+  for (let c = 0; c < count; c++) {
+    const frac = document.createElement('div');
+    frac.className = 'bar-fracture';
+    frac.style.left = (20 + Math.random() * 60) + '%';
+    frac.style.top = '-4px';
+    frac.style.height = '16px';
+    frac.style.transform = `rotate(${Math.random() * 20 - 10}deg)`;
+    frac.style.animationDelay = (0.1 + c * 0.08) + 's';
+    barEl.appendChild(frac);
+  }
+}
+
 function lockIn(timedOut) {
   if (state.locked) return;
   if (!timedOut && pickIncomplete()) return;
@@ -3914,13 +3956,16 @@ function lockEstimate() {
     if (al) { al.classList.remove('anim-hidden'); al.classList.add('anim-label-settle'); }
   });
 
-  // Beat 3 (550ms): Gap sweeps open + score settles
+  // Beat 3 (550ms): Gap sweeps open + score settles + bar fractures on bad scores
   queueAnim(550, () => {
     const gap = $('anim-gap');
     if (gap) gap.classList.remove('anim-hidden');
     $('feedback-score').classList.remove('anim-hidden');
     $('feedback-score').classList.add('anim-score-settle');
     $('feedback-detail').classList.remove('anim-hidden');
+    // Fracture lines on the bar when the answer is poor
+    const bar = $('feedback-visual').querySelector('.feedback-bar');
+    addBarFractures(bar, score);
   });
 
   // Beat 4 (900ms): Layer brushes in
@@ -3990,10 +4035,13 @@ function lockStack() {
         el.appendChild(puff);
         setTimeout(() => puff.remove(), 500);
       }
-      // Each wrong find shakes the site area
+      // Wrong finds crack and shake the site
       if (offsets[i] >= 2) {
+        addItemCracks(el, 2);
         const site = $('site-area');
         if (site) { site.classList.remove('anim-site-hit'); site.offsetHeight; site.classList.add('anim-site-hit'); }
+      } else if (offsets[i] === 1) {
+        addItemCracks(el, 1);
       }
     });
   });
@@ -4085,15 +4133,16 @@ function lockPick() {
         pos.className = 'correct-pos'; pos.textContent = tag;
         el.appendChild(pos);
       }
-      // Wrong pick shakes site
+      // Wrong pick cracks and shakes site
       if (!isAns) {
+        addItemCracks(el, 2);
         const site = $('site-area');
         if (site) { site.classList.remove('anim-site-hit'); site.offsetHeight; site.classList.add('anim-site-hit'); }
       }
     });
   });
 
-  // Beat 3 (750ms): If wrong, correct answer highlights / pair wrong items crumble off
+  // Beat 3 (750ms): If wrong, correct answer highlights / pair wrong items crack and crumble
   queueAnim(750, () => {
     sq.items.forEach((item, i) => {
       const el = $('anim-pick-' + i);
@@ -4107,9 +4156,10 @@ function lockPick() {
         pos.className = 'correct-pos'; pos.textContent = tag;
         el.appendChild(pos);
       } else if (!isAns && !picked && isPair && !right) {
-        // Pair trench: wrong items crack and fall off screen
+        // Pair trench: wrong items crack then fall off screen
         el.classList.remove('dim');
-        el.classList.add('anim-crumble-fall');
+        addItemCracks(el, 3);
+        setTimeout(() => el.classList.add('anim-crumble-fall'), 200);
       }
     });
   });
