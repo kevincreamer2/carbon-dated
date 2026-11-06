@@ -3640,12 +3640,21 @@ function tickTorch() {
 // ---- ANIMATION QUEUE (skip system) ----
 let animQueue = []; // { timer, fn } — pending animation steps
 let animFinalize = null; // called to instantly show final state
+let animBaseTime = 0; // set when the sequence starts
+
+function startAnimSequence() {
+  // Force a layout so anim-hidden states are painted before we start revealing
+  document.body.offsetHeight;
+  animBaseTime = performance.now();
+}
 
 function queueAnim(delayMs, fn) {
+  // Minimum 20ms so the browser has time to paint the hidden state
+  const actualDelay = Math.max(20, delayMs);
   const timer = setTimeout(() => {
     animQueue = animQueue.filter(a => a.timer !== timer);
     fn();
-  }, delayMs);
+  }, actualDelay);
   animQueue.push({ timer, fn });
 }
 
@@ -3753,24 +3762,26 @@ function lockEstimate() {
 
   showFact(ratioQs[state.round].f);
 
-  // Beat 1 (0ms): Your guess pin drops and sticks
-  queueAnim(0, () => {
+  startAnimSequence();
+
+  // Beat 1 (50ms): Your guess pin drops and sticks
+  queueAnim(50, () => {
     const gp = $('anim-guess-pin');
     if (gp) { gp.classList.remove('anim-hidden'); gp.classList.add('anim-pin-drop'); }
     const gl = $('anim-guess-label');
     if (gl) { gl.classList.remove('anim-hidden'); gl.classList.add('anim-label-pop'); }
   });
 
-  // Beat 2 (200ms): Answer pin rises up
-  queueAnim(200, () => {
+  // Beat 2 (300ms): Answer pin rises up
+  queueAnim(300, () => {
     const ap = $('anim-answer-pin');
     if (ap) { ap.classList.remove('anim-hidden'); ap.classList.add('anim-pin-rise'); }
     const al = $('anim-answer-label');
     if (al) { al.classList.remove('anim-hidden'); al.classList.add('anim-label-pop'); }
   });
 
-  // Beat 3 (400ms): Gap flashes colour + score pops
-  queueAnim(400, () => {
+  // Beat 3 (550ms): Gap flashes colour + score pops
+  queueAnim(550, () => {
     const gap = $('anim-gap');
     if (gap) gap.classList.remove('anim-hidden');
     $('feedback-score').classList.remove('anim-hidden');
@@ -3778,8 +3789,8 @@ function lockEstimate() {
     $('feedback-detail').classList.remove('anim-hidden');
   });
 
-  // Beat 4 (750ms): Layer brushes in
-  queueAnim(750, () => {
+  // Beat 4 (900ms): Layer brushes in
+  queueAnim(900, () => {
     renderSite($('site-area'), { freshBand: bi, tilt: 0 });
     if (band) {
       const fl = $('feedback-layer');
@@ -3830,9 +3841,11 @@ function lockStack() {
   showFact(sq.f);
   $('btn-next').hidden = false;
 
+  startAnimSequence();
+
   // Stagger reveals: each item 200ms apart
   userOrder.forEach((item, i) => {
-    queueAnim(i * 200, () => {
+    queueAnim(50 + i * 200, () => {
       const el = $('anim-strata-' + i);
       if (el) { el.classList.remove('anim-hidden'); el.classList.add('anim-item-reveal'); }
       // Each wrong find shakes the site area
@@ -3844,7 +3857,7 @@ function lockStack() {
   });
 
   // Score pops after all items revealed
-  queueAnim(userOrder.length * 200 + 100, () => {
+  queueAnim(50 + userOrder.length * 200 + 150, () => {
     $('feedback-score').classList.remove('anim-hidden');
     $('feedback-score').classList.add('anim-score-pop');
     $('feedback-detail').classList.remove('anim-hidden');
@@ -3898,6 +3911,8 @@ function lockPick() {
   $('question-text').textContent = sq.kind === 'pair' ? 'Pick the pair' : sq.prompt;
   showFact(sq.f);
   $('btn-next').hidden = false;
+
+  startAnimSequence();
 
   // Beat 1 (150ms): All options dim except your pick(s) — focus attention
   queueAnim(150, () => {
