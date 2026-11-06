@@ -4938,6 +4938,85 @@ setInterval(async () => {
 }, 30000);
 backfillHistory();
 routeDaily();
+
+// Auto-play mode: ?autoplay — watch all animations without playing
+if (/[?&]autoplay\b/.test(location.search)) {
+  const AP_DELAY = 2200; // ms to watch each animation before advancing
+  let apTimer = null;
+  function autoPlay() {
+    // Start a practice game
+    startPractice(null);
+    apTimer = setTimeout(apRound, 500);
+  }
+  function apRound() {
+    if (state.finished) return; // done — report animations play on their own
+    if (state.locked) { apTimer = setTimeout(apRound, 300); return; } // wait for lock to clear
+    // Check if we're on the interstitial
+    const inter = document.getElementById('inter-screen');
+    if (inter && inter.classList.contains('active')) {
+      const btn = inter.querySelector('button');
+      if (btn) btn.click();
+      apTimer = setTimeout(apRound, 600);
+      return;
+    }
+    if (state.phase === 'estimate') {
+      // Set a random guess on the slider
+      state.guess = Math.round(Math.random() * 100);
+      const gd = $('guess-display');
+      const q = ratioQs[state.round];
+      const f = q.fmt || 'pct';
+      if (f === 'pct') gd.textContent = state.guess + '%';
+      else if (f === 'date') {
+        const t = dateTier(q.a);
+        const v = Math.round(t.lo + (t.hi - t.lo) * state.guess / 100);
+        gd.textContent = String(v);
+      } else gd.textContent = state.guess + '%';
+      const sl = $('slider');
+      if (sl) sl.value = state.guess;
+    } else {
+      const sq = stackQs[state.round];
+      const kind = sq.kind || 'strata';
+      if (kind === 'strata') {
+        // Shuffle the stack order randomly
+        state.stackOrder = [...sq.correct].sort(() => Math.random() - 0.5);
+        renderStackItems();
+      } else {
+        // Pick random items for tap trenches
+        const need = TRENCH_COPY[kind].need;
+        const indices = sq.items.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, need);
+        state.picks = indices;
+        renderPickItems();
+      }
+    }
+    // Lock in after a brief pause
+    apTimer = setTimeout(() => {
+      lockIn(false);
+      // Wait for animations, then advance
+      apTimer = setTimeout(() => {
+        // Skip any remaining animations
+        if (animQueue.length) skipAnims();
+        setTimeout(() => {
+          advance();
+          apTimer = setTimeout(apRound, 600);
+        }, 300);
+      }, AP_DELAY);
+    }, 400);
+  }
+  // Add a floating control panel
+  const apPanel = document.createElement('div');
+  apPanel.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;gap:8px;';
+  const apBtn = document.createElement('button');
+  apBtn.textContent = '▶ Auto-Play';
+  apBtn.style.cssText = 'background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:50px;font-weight:700;font-size:0.9rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);';
+  apBtn.addEventListener('click', () => { clearTimeout(apTimer); autoPlay(); });
+  apPanel.appendChild(apBtn);
+  const apStop = document.createElement('button');
+  apStop.textContent = '⏹ Stop';
+  apStop.style.cssText = 'background:var(--miss);color:#fff;border:none;padding:10px 16px;border-radius:50px;font-weight:700;font-size:0.9rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);';
+  apStop.addEventListener('click', () => { clearTimeout(apTimer); });
+  apPanel.appendChild(apStop);
+  document.body.appendChild(apPanel);
+}
 </script>
 
 
