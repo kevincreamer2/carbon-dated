@@ -3896,12 +3896,10 @@ function lockPick() {
   $('feedback-detail').classList.add('anim-hidden');
   const tag = { intrusive: 'intruder', forgery: 'forged', pair: 'the pair' }[sq.kind];
 
-  // Build all items initially dimmed
+  // Build all items fully hidden, ready for staggered reveal
   $('feedback-visual').innerHTML = '<div style="display:flex;flex-direction:column;gap:6px;width:100%;" id="anim-pick-list">' +
     sq.items.map((item, i) => {
-      const isAns = sq.answer.includes(i), picked = picks.includes(i);
-      // Start: all items show as dim/neutral
-      return `<div class="stack-feedback-item dim" id="anim-pick-${i}" data-is-ans="${isAns}" data-picked="${picked}"><div class="result-mark"></div><div class="item-text">${escapeHtml(item)}</div></div>`;
+      return `<div class="stack-feedback-item dim anim-hidden" id="anim-pick-${i}"><div class="result-mark"></div><div class="item-text">${escapeHtml(item)}</div></div>`;
     }).join('') + '</div>';
 
   const note = $('feedback-note');
@@ -3914,16 +3912,16 @@ function lockPick() {
 
   startAnimSequence();
 
-  // Beat 1 (150ms): All options dim except your pick(s) — focus attention
-  queueAnim(150, () => {
-    picks.forEach(pi => {
-      const el = $('anim-pick-' + pi);
-      if (el) { el.classList.remove('dim'); el.style.transition = 'opacity 0.15s, border-color 0.15s, background 0.15s'; }
+  // Beat 1 (50ms): All items fade in as dim/neutral
+  queueAnim(50, () => {
+    sq.items.forEach((item, i) => {
+      const el = $('anim-pick-' + i);
+      if (el) { el.classList.remove('anim-hidden'); el.classList.add('anim-item-reveal'); }
     });
   });
 
-  // Beat 2 (400ms): Your pick(s) flash ✓ or ✗
-  queueAnim(400, () => {
+  // Beat 2 (450ms): Your pick(s) light up and get their ✓ or ✗
+  queueAnim(450, () => {
     picks.forEach(pi => {
       const el = $('anim-pick-' + pi);
       if (!el) return;
@@ -3932,7 +3930,6 @@ function lockPick() {
       const mark = isAns ? '✓' : '✗';
       el.className = `stack-feedback-item ${cls}`;
       el.querySelector('.result-mark').textContent = mark;
-      el.classList.add('anim-item-reveal');
       if (isAns) {
         const pos = document.createElement('div');
         pos.className = 'correct-pos'; pos.textContent = tag;
@@ -3946,8 +3943,8 @@ function lockPick() {
     });
   });
 
-  // Beat 3 (700ms): If wrong, correct answer highlights / pair crumble
-  queueAnim(700, () => {
+  // Beat 3 (750ms): If wrong, correct answer highlights / pair wrong items crumble off
+  queueAnim(750, () => {
     sq.items.forEach((item, i) => {
       const el = $('anim-pick-' + i);
       if (!el) return;
@@ -3956,19 +3953,19 @@ function lockPick() {
         // Correct answer the player missed — highlight it
         el.className = 'stack-feedback-item near';
         el.querySelector('.result-mark').textContent = '!';
-        el.classList.add('anim-item-reveal');
         const pos = document.createElement('div');
         pos.className = 'correct-pos'; pos.textContent = tag;
         el.appendChild(pos);
       } else if (!isAns && !picked && isPair && !right) {
-        // Pair trench: wrong items crumble and fall
+        // Pair trench: wrong items crack and fall off screen
+        el.classList.remove('dim');
         el.classList.add('anim-crumble-fall');
       }
     });
   });
 
-  // Beat 4 (1000ms): Score + stability
-  queueAnim(1000, () => {
+  // Beat 4 (1100ms): Score + stability
+  queueAnim(1100, () => {
     $('feedback-score').classList.remove('anim-hidden');
     $('feedback-score').classList.add('anim-score-pop');
     $('feedback-detail').classList.remove('anim-hidden');
