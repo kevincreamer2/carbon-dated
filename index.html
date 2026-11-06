@@ -468,33 +468,57 @@ input[type="range"]::-moz-range-thumb {
 @keyframes stampIn{0%{opacity:0;transform:translateX(-50%) rotate(-6deg) scale(1.5)}100%{opacity:1;transform:translateX(-50%) rotate(-6deg) scale(1)}}
 
 /* Lock-in animation juice — weighted, earthy, archaeological */
-/* Pin drops with gravity — falls and embeds, no bounce */
+
+/* === PIN (pinpoint) — placing and finding pins in the ground === */
+/* Your pin drops from above and embeds */
 @keyframes pinDrop { 0% { transform: translateX(-50%) translateY(-36px); opacity: 0; } 70% { opacity: 1; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
 /* Answer pin pushed up through the soil */
 @keyframes pinRise { 0% { transform: translateX(-50%) translateY(14px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
+
+/* === DATE (year guess) — a carbon-dating readout resolving === */
+/* Your date marker is already placed — just appears */
+@keyframes datePlace { 0% { transform: translateX(-50%); opacity: 0; } 100% { transform: translateX(-50%); opacity: 1; } }
+/* The real date resolves — slides to its position like a reading settling on an instrument */
+@keyframes dateResolve { 0% { transform: translateX(-50%) translateX(20px); opacity: 0; } 60% { opacity: 1; } 100% { transform: translateX(-50%) translateX(0); opacity: 1; } }
+
+/* === PCT (percentage) — a sample measurement coming back === */
+/* Your estimate appears — already committed */
+@keyframes pctMark { 0% { transform: translateX(-50%); opacity: 0; } 100% { transform: translateX(-50%); opacity: 1; } }
+/* The real percentage fills in from the bar — like a gauge reading */
+@keyframes pctReveal { 0% { transform: translateX(-50%) scaleY(0.4); opacity: 0; } 100% { transform: translateX(-50%) scaleY(1); opacity: 1; } }
+
+/* === Shared survey === */
 /* Labels settle into place */
 @keyframes labelSettle { 0% { transform: translateX(-50%); opacity: 0; } 100% { transform: translateX(-50%); opacity: 1; } }
 /* Gap sweeps open like a brush stroke revealing the distance */
 @keyframes gapSweep { 0% { transform: scaleX(0); opacity: 0; } 40% { opacity: 0.9; } 100% { transform: scaleX(1); opacity: 0.7; } }
 /* Score fades in with weight — no bouncing */
 @keyframes scoreSettle { 0% { transform: translateY(6px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-/* Strata item slides in and settles — like a find being catalogued */
+
+/* === Excavation === */
+/* Strata item settles — like a find being catalogued */
 @keyframes itemSettle { 0% { transform: translateY(8px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
 /* Stone crumbles: cracks, shifts, then weight pulls it down */
 @keyframes crumbleFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 15% { transform: translateY(-2px) rotate(-1deg); } 35% { transform: translateY(0) rotate(0.5deg); opacity: 1; } 100% { transform: translateY(120px) rotate(22deg); opacity: 0; } }
-/* Structure shifts — the ground moves, not a UI shake */
+/* Structure shifts — the ground moves */
 @keyframes siteShift { 0% { transform: translateY(0); } 30% { transform: translateY(2px); } 60% { transform: translateX(-2px) translateY(1px); } 100% { transform: translate(0); } }
-/* Card settles after a wrong answer — the desk shudders */
-@keyframes cardSettle { 0% { transform: translateY(0); } 40% { transform: translateY(1.5px); } 100% { transform: translateY(0); } }
+
 .anim-hidden { opacity: 0 !important; }
+/* Pin type */
 .anim-pin-drop { animation: pinDrop 0.28s cubic-bezier(.45,.05,.55,.95) both; }
 .anim-pin-rise { animation: pinRise 0.3s cubic-bezier(.25,.1,.25,1) both; }
+/* Date type */
+.anim-date-place { animation: datePlace 0.2s ease both; }
+.anim-date-resolve { animation: dateResolve 0.35s cubic-bezier(.25,.1,.25,1) both; }
+/* Pct type */
+.anim-pct-mark { animation: pctMark 0.2s ease both; }
+.anim-pct-reveal { animation: pctReveal 0.3s cubic-bezier(.25,.1,.25,1) both; }
+/* Shared */
 .anim-label-settle { animation: labelSettle 0.25s ease both; }
 .anim-score-settle { animation: scoreSettle 0.3s ease both; }
 .anim-item-reveal { animation: itemSettle 0.22s cubic-bezier(.25,.1,.25,1) both; }
 .anim-crumble-fall { animation: crumbleFall 0.6s cubic-bezier(.55,.05,.68,.53) both; pointer-events: none; }
 .anim-site-hit { animation: siteShift 0.25s ease-out; }
-.anim-card-settle { animation: cardSettle 0.2s ease; }
 .feedback-gap-fill { position: absolute; top: 0; height: 8px; border-radius: 4px; transform-origin: left; animation: gapSweep 0.35s cubic-bezier(.25,.1,.25,1) both; }
 
 /* Swatches (logs, feedback, report) */
@@ -3774,24 +3798,43 @@ function lockEstimate() {
   showFact(ratioQs[state.round].f);
 
   startAnimSequence();
+  const fmt = q.fmt || 'pct';
 
-  // Beat 1 (50ms): Your guess pin drops and sticks
+  // Beat 1 (50ms): Your guess appears — different feel per format
   queueAnim(50, () => {
     const gp = $('anim-guess-pin');
-    if (gp) { gp.classList.remove('anim-hidden'); gp.classList.add('anim-pin-drop'); }
     const gl = $('anim-guess-label');
+    if (fmt === 'pin') {
+      // Pin: drops from above and embeds in the ground
+      if (gp) { gp.classList.remove('anim-hidden'); gp.classList.add('anim-pin-drop'); }
+    } else if (fmt === 'date') {
+      // Date: your mark is already committed — just appears
+      if (gp) { gp.classList.remove('anim-hidden'); gp.classList.add('anim-date-place'); }
+    } else {
+      // Pct: your estimate appears — already committed
+      if (gp) { gp.classList.remove('anim-hidden'); gp.classList.add('anim-pct-mark'); }
+    }
     if (gl) { gl.classList.remove('anim-hidden'); gl.classList.add('anim-label-settle'); }
   });
 
-  // Beat 2 (300ms): Answer pin rises up
+  // Beat 2 (300ms): Answer revealed — different feel per format
   queueAnim(300, () => {
     const ap = $('anim-answer-pin');
-    if (ap) { ap.classList.remove('anim-hidden'); ap.classList.add('anim-pin-rise'); }
     const al = $('anim-answer-label');
+    if (fmt === 'pin') {
+      // Pin: answer rises up through the soil
+      if (ap) { ap.classList.remove('anim-hidden'); ap.classList.add('anim-pin-rise'); }
+    } else if (fmt === 'date') {
+      // Date: the real date resolves — slides to position like a readout settling
+      if (ap) { ap.classList.remove('anim-hidden'); ap.classList.add('anim-date-resolve'); }
+    } else {
+      // Pct: the real percentage grows in from the bar — like a gauge reading
+      if (ap) { ap.classList.remove('anim-hidden'); ap.classList.add('anim-pct-reveal'); }
+    }
     if (al) { al.classList.remove('anim-hidden'); al.classList.add('anim-label-settle'); }
   });
 
-  // Beat 3 (550ms): Gap flashes colour + score pops
+  // Beat 3 (550ms): Gap sweeps open + score settles
   queueAnim(550, () => {
     const gap = $('anim-gap');
     if (gap) gap.classList.remove('anim-hidden');
