@@ -4579,6 +4579,11 @@ function routeDaily() {
 
 buildPuzzle(null);
 fetchCrowd();
+// Refresh digger count every 30s so the number updates live
+setInterval(async () => {
+  await fetchCrowd();
+  if (state.finished) renderCrowd();
+}, 30000);
 backfillHistory();
 routeDaily();
 </script>
