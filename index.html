@@ -467,24 +467,35 @@ input[type="range"]::-moz-range-thumb {
 @keyframes siteDust{0%{opacity:0;transform:translateY(30px) scale(.6)}35%{opacity:1}100%{opacity:0;transform:translateY(-24px) scale(1.3)}}
 @keyframes stampIn{0%{opacity:0;transform:translateX(-50%) rotate(-6deg) scale(1.5)}100%{opacity:1;transform:translateX(-50%) rotate(-6deg) scale(1)}}
 
-/* Lock-in animation juice */
-@keyframes pinDrop { 0% { transform: translateX(-50%) translateY(-20px) scaleY(1.3); opacity: 0; } 60% { transform: translateX(-50%) translateY(2px) scaleY(0.9); opacity: 1; } 100% { transform: translateX(-50%) translateY(0) scaleY(1); opacity: 1; } }
-@keyframes pinRise { 0% { transform: translateX(-50%) translateY(10px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
-@keyframes labelPop { 0% { transform: translateX(-50%) scale(0.7); opacity: 0; } 60% { transform: translateX(-50%) scale(1.06); } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
-@keyframes gapFlash { 0% { opacity: 0; height: 0; } 30% { opacity: 1; height: 8px; } 100% { opacity: 0.7; height: 8px; } }
-@keyframes scorePop { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
-@keyframes itemReveal { 0% { transform: translateX(-8px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
-@keyframes crumbleFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 30% { transform: translateY(-4px) rotate(-2deg); } 100% { transform: translateY(60px) rotate(12deg); opacity: 0; } }
-@keyframes siteHit { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+/* Lock-in animation juice — weighted, earthy, archaeological */
+/* Pin drops with gravity — falls and embeds, no bounce */
+@keyframes pinDrop { 0% { transform: translateX(-50%) translateY(-36px); opacity: 0; } 70% { opacity: 1; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
+/* Answer pin pushed up through the soil */
+@keyframes pinRise { 0% { transform: translateX(-50%) translateY(14px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
+/* Labels settle into place */
+@keyframes labelSettle { 0% { transform: translateX(-50%); opacity: 0; } 100% { transform: translateX(-50%); opacity: 1; } }
+/* Gap sweeps open like a brush stroke revealing the distance */
+@keyframes gapSweep { 0% { transform: scaleX(0); opacity: 0; } 40% { opacity: 0.9; } 100% { transform: scaleX(1); opacity: 0.7; } }
+/* Score fades in with weight — no bouncing */
+@keyframes scoreSettle { 0% { transform: translateY(6px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+/* Strata item slides in and settles — like a find being catalogued */
+@keyframes itemSettle { 0% { transform: translateY(8px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+/* Stone crumbles: cracks, shifts, then weight pulls it down */
+@keyframes crumbleFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 15% { transform: translateY(-2px) rotate(-1deg); } 35% { transform: translateY(0) rotate(0.5deg); opacity: 1; } 100% { transform: translateY(120px) rotate(22deg); opacity: 0; } }
+/* Structure shifts — the ground moves, not a UI shake */
+@keyframes siteShift { 0% { transform: translateY(0); } 30% { transform: translateY(2px); } 60% { transform: translateX(-2px) translateY(1px); } 100% { transform: translate(0); } }
+/* Card settles after a wrong answer — the desk shudders */
+@keyframes cardSettle { 0% { transform: translateY(0); } 40% { transform: translateY(1.5px); } 100% { transform: translateY(0); } }
 .anim-hidden { opacity: 0 !important; }
-.anim-pin-drop { animation: pinDrop 0.18s cubic-bezier(.2,1.4,.4,1) both; }
-.anim-pin-rise { animation: pinRise 0.22s ease-out both; }
-.anim-label-pop { animation: labelPop 0.2s ease-out both; }
-.anim-score-pop { animation: scorePop 0.3s cubic-bezier(.2,1.4,.4,1) both; }
-.anim-item-reveal { animation: itemReveal 0.2s ease-out both; }
-.anim-crumble-fall { animation: crumbleFall 0.45s ease-in both; pointer-events: none; }
-.anim-site-hit { animation: siteHit 0.15s ease-in-out; }
-.feedback-gap-fill { position: absolute; top: 0; height: 8px; border-radius: 4px; animation: gapFlash 0.35s ease-out both; }
+.anim-pin-drop { animation: pinDrop 0.28s cubic-bezier(.45,.05,.55,.95) both; }
+.anim-pin-rise { animation: pinRise 0.3s cubic-bezier(.25,.1,.25,1) both; }
+.anim-label-settle { animation: labelSettle 0.25s ease both; }
+.anim-score-settle { animation: scoreSettle 0.3s ease both; }
+.anim-item-reveal { animation: itemSettle 0.22s cubic-bezier(.25,.1,.25,1) both; }
+.anim-crumble-fall { animation: crumbleFall 0.6s cubic-bezier(.55,.05,.68,.53) both; pointer-events: none; }
+.anim-site-hit { animation: siteShift 0.25s ease-out; }
+.anim-card-settle { animation: cardSettle 0.2s ease; }
+.feedback-gap-fill { position: absolute; top: 0; height: 8px; border-radius: 4px; transform-origin: left; animation: gapSweep 0.35s cubic-bezier(.25,.1,.25,1) both; }
 
 /* Swatches (logs, feedback, report) */
 .swatch{display:inline-block;flex:none;width:26px;height:18px;box-sizing:border-box;border:1.5px solid #23302C;border-radius:2px;background-color:var(--stone);background-image:var(--crack,none);box-shadow:var(--glow)}
@@ -3769,7 +3780,7 @@ function lockEstimate() {
     const gp = $('anim-guess-pin');
     if (gp) { gp.classList.remove('anim-hidden'); gp.classList.add('anim-pin-drop'); }
     const gl = $('anim-guess-label');
-    if (gl) { gl.classList.remove('anim-hidden'); gl.classList.add('anim-label-pop'); }
+    if (gl) { gl.classList.remove('anim-hidden'); gl.classList.add('anim-label-settle'); }
   });
 
   // Beat 2 (300ms): Answer pin rises up
@@ -3777,7 +3788,7 @@ function lockEstimate() {
     const ap = $('anim-answer-pin');
     if (ap) { ap.classList.remove('anim-hidden'); ap.classList.add('anim-pin-rise'); }
     const al = $('anim-answer-label');
-    if (al) { al.classList.remove('anim-hidden'); al.classList.add('anim-label-pop'); }
+    if (al) { al.classList.remove('anim-hidden'); al.classList.add('anim-label-settle'); }
   });
 
   // Beat 3 (550ms): Gap flashes colour + score pops
@@ -3785,7 +3796,7 @@ function lockEstimate() {
     const gap = $('anim-gap');
     if (gap) gap.classList.remove('anim-hidden');
     $('feedback-score').classList.remove('anim-hidden');
-    $('feedback-score').classList.add('anim-score-pop');
+    $('feedback-score').classList.add('anim-score-settle');
     $('feedback-detail').classList.remove('anim-hidden');
   });
 
@@ -3859,7 +3870,7 @@ function lockStack() {
   // Score pops after all items revealed
   queueAnim(50 + userOrder.length * 200 + 150, () => {
     $('feedback-score').classList.remove('anim-hidden');
-    $('feedback-score').classList.add('anim-score-pop');
+    $('feedback-score').classList.add('anim-score-settle');
     $('feedback-detail').classList.remove('anim-hidden');
     // Run excavation damage after reveals complete
     excavate(offsets);
@@ -3967,7 +3978,7 @@ function lockPick() {
   // Beat 4 (1100ms): Score + stability
   queueAnim(1100, () => {
     $('feedback-score').classList.remove('anim-hidden');
-    $('feedback-score').classList.add('anim-score-pop');
+    $('feedback-score').classList.add('anim-score-settle');
     $('feedback-detail').classList.remove('anim-hidden');
     if (isPair && right) {
       note.hidden = false;
