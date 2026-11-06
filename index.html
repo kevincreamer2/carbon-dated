@@ -3947,7 +3947,7 @@ function renderCrowd() {
   if (p.mode === 'day') line = pct > 0 ? `You beat <b>${pct}%</b> of today's ${fmt(n)} diggers` : `A tough dig: the other ${fmt(n - 1)} diggers all scored at least as well`;
   else if (n === 1) line = 'You\'re one of the very first diggers. Check back soon to see how you compare.';
   else if (p.above === 0) line = `Your ${mine} is the <b>best dig</b> played so far`;
-  else line = pct > 0 ? `Your ${mine} beats <b>${pct}%</b> of all ${fmt(n)} digs played so far` : `A tough dig: every other dig so far scored at least as well`;
+  else line = pct > 0 ? `Your ${mine} beats <b>${pct}%</b> of all ${fmt(n)} diggers` : `A tough dig: every other digger so far scored at least as well`;
   $('crowd-line').innerHTML = line;
   // The score spread only once there's enough to look like one
   const showChart = n >= CHART_MIN;
@@ -3957,9 +3957,8 @@ function renderCrowd() {
     const top = Math.max(...b, 1), myB = Math.min(19, Math.floor(mine / crowd.bucket));
     $('crowd-bars').innerHTML = b.map((c, i) => `<div class="hb${i === myB ? ' mine' : ''}" style="height:${c ? Math.max(8, c / top * 100) : 0}%" title="${i * crowd.bucket}–${i * crowd.bucket + crowd.bucket - 1}: ${c}"></div>`).join('');
   }
-  const today = p.mode === 'all' && crowd.players > 0 ? `${fmt(crowd.players)} digger${crowd.players === 1 ? '' : 's'} today` : '';
-  const stand = p.standing === null || n < CHART_MIN ? '' : p.mode === 'day' ? `${p.standing}% of diggers kept today's site standing` : `${p.standing}% of all digs kept their site standing`;
-  $('crowd-cap').textContent = [today, stand].filter(Boolean).join(' · ');
+  const stand = p.standing === null || n < CHART_MIN ? '' : p.mode === 'day' ? `${p.standing}% of diggers kept today's site standing` : `${p.standing}% of all diggers kept their site standing`;
+  $('crowd-cap').textContent = stand;
 }
 
 function showResults() {
@@ -4296,7 +4295,7 @@ function buildShareText() {
   // How it ranks today, once enough people have played for it to mean something
   const rank = crowdRank();
   if (rank && rank.n >= CHART_MIN) {
-    const who = rank.mode === 'day' ? `${rank.n.toLocaleString('en-GB')} diggers today` : 'all digs so far';
+    const who = rank.mode === 'day' ? `${rank.n.toLocaleString('en-GB')} diggers today` : 'all diggers';
     lines.push(rank.top <= 50 ? `🏆 Top ${rank.top}% of ${who}` : `⛏ Beat ${rank.beat}% of ${who}`);
   }
   const streak = isPractice ? 0 : streakStats(loadHistory()).cur;
