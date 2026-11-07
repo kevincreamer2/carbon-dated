@@ -2607,7 +2607,7 @@ const FORGERY_BANK = [
 
 // PICK THE PAIR: five finds, exactly two share a hidden link.
 // Tuning: the link should be findable but not shouted — and none of the other three may share it.
-// It's the hardest trench, so getting it right steadies the site (PAIR_RESTORE).
+// It's the hardest trench — getting it right scores 100 points.
 const PAIR_BANK = [
   { c: 'tech', items: ["Lego", "Pandora", "Nokia", "Ikea", "Heineken"], pair: ["Lego", "Pandora"], f: "Both are Danish. Ikea is Swedish, Nokia Finnish and Heineken Dutch." },
   { c: 'science', items: ["Tomato", "Cucumber", "Carrot", "Potato", "Celery"], pair: ["Tomato", "Cucumber"], f: "Both are fruits to a botanist — they grow from the flower and hold the seeds." },
@@ -2634,7 +2634,7 @@ const PAIR_BANK = [
   { c: 'science', items: ["Mercury", "Venus", "Mars", "Jupiter", "Saturn"], pair: ["Mercury", "Venus"], f: "Both have no moons." },
   { c: 'culture', items: ["Dracula", "The Picture of Dorian Gray", "Frankenstein", "Dr Jekyll and Mr Hyde", "Treasure Island"], pair: ["Dracula", "The Picture of Dorian Gray"], f: "Both were written by Irish authors, Bram Stoker and Oscar Wilde." },
 ];
-const PAIR_RESTORE = 8; // stability won back for a matched pair, on top of the usual bonus
+// (PAIR_RESTORE removed — stability system replaced by ruin scorecard)
 
 const TRENCH_START = '2026-11-05';
 const TRENCH_NAMES = { strata: 'Strata', intrusive: 'Intrusive find', forgery: 'Forgery', pair: 'Pick the pair' };
@@ -3156,17 +3156,11 @@ let state = {
   locked: false, guess: 50,
   stackOrder: [],
   scores: [], finished: false,
-  lives: 3, failed: false, failedAt: null,
   v: 2, fv: 1, forgerResult: null, forgerDeadline: null,
   // Site fields: the condition of each uncovered band, and what has happened to individual pieces
-  towerStability: 100,
   siteConds: [],   // per band, top first: 'pristine'|'solid'|'cracked'|'crumbling'
   pieceDmg: {},    // 'band-piece' id -> steps of damage on top of its layer's condition
-  towerCollapsed: false,
 };
-
-// Runtime only — not persisted to localStorage
-let lastPulledBlocks = [];
 
 // 5 Nov 2026 switched to the new formats mid-day, so progress saved on the old version is set aside
 function digRev(k) { return k === '2026-11-05' ? '-r2' : ''; }
@@ -3489,49 +3483,63 @@ function renderSite(el, view = {}) {
   fitSite(el, view.factor || 0.9);
 }
 
-function siteTilt() {
-  const s = state.towerStability;
-  if (state.phase !== 'stack' || state.towerCollapsed) return 0;
-  return s > 60 ? 0 : s > 30 ? -2 : s > 0 ? -4 : -4;
+// ---- RUIN SCORECARD ----
+// The ruin's visual state reflects your running score percentage, never causes a game-over.
+// Each tier maps to a target fraction of pieces that should be broken.
+const RUIN_TIERS = [
+  { min: 0.95, name: 'Pristine',  dmg: 0    },
+  { min: 0.85, name: 'Intact',    dmg: 0.05 },
+  { min: 0.70, name: 'Weathered', dmg: 0.18 },
+  { min: 0.50, name: 'Crumbling', dmg: 0.40 },
+  { min: 0.30, name: 'Damaged',   dmg: 0.65 },
+  { min: 0,    name: 'Rubble',    dmg: 0.90 },
+];
+
+function ruinTier(score, maxPossible) {
+  const pct = maxPossible > 0 ? score / maxPossible : 1;
+  return RUIN_TIERS.find(t => pct >= t.min) || RUIN_TIERS[RUIN_TIERS.length - 1];
 }
 
-let lastStability = null;
-function updateStabilityUI() {
-  const fill = $('stability-fill');
-  const pct = $('stability-pct');
-  const s = Math.max(0, Math.min(100, state.towerStability));
-  // Site settles visibly when stability drops
-  if (lastStability !== null && s < lastStability) {
-    const site = $('site-area');
-    if (site) { site.classList.remove('anim-site-hit'); site.offsetHeight; site.classList.add('anim-site-hit'); }
-  }
-  lastStability = s;
-  fill.style.width = s + '%';
-  fill.style.transition = 'width 0.4s ease';
-  pct.textContent = s + '%';
-  if (s > 60) { fill.style.background = 'var(--success)'; pct.style.color = 'var(--success)'; }
-  else if (s > 30) { fill.style.background = 'var(--warn)'; pct.style.color = 'var(--warn)'; }
-  else { fill.style.background = 'var(--miss)'; pct.style.color = 'var(--miss)'; }
+function ruinTierFromTotal(total) {
+  return RUIN_TIERS.find(t => (total / 1000) >= t.min) || RUIN_TIERS[RUIN_TIERS.length - 1];
 }
 
-const PULL_COST = 11, PRISTINE_COST = 6, NEAR_COST = 4; // tuned without props: cave-ins ≈3% good players, ≈45–50% average
+// How many rounds have been scored so far (survey + excavation)
+function roundsScored() {
+  return state.scores.length;
+}
 
-// offsets: how far each placed find is from where it belongs (0 exact, 1 one off, 2+ out)
-// bonus: stability won back on top (a matched pair)
-function excavate(offsets, bonus = 0) {
+// Running total across all scored rounds
+function runningTotal() {
+  return state.scores.reduce((a, s) => a + s.score, 0);
+}
+
+// Update the ruin's visual damage to match the current running score.
+// Breaks pieces (with animation) if the score has dropped into a worse tier.
+function updateRuinDamage() {
   const site = currentSite();
-  lastPulledBlocks = [];
-  const wrongCount = offsets.filter(d => d >= 2).length;
-  const nearCount = offsets.filter(d => d === 1).length;
+  const total = runningTotal();
+  const maxSoFar = roundsScored() * 100;
+  const tier = ruinTier(total, maxSoFar);
 
-  // Exact finds steady the site; finds one place off loosen it without knocking anything out
-  offsets.forEach(d => { if (d === 0) state.towerStability += 1; });
-  state.towerStability -= nearCount * NEAR_COST;
+  // Count total pieces and currently broken ones
+  const totalPieces = site.bands.reduce((a, b) => a + b.pieces.length, 0);
+  let brokenCount = 0;
+  site.bands.forEach((b, bi) => b.pieces.forEach((p, pi) => {
+    if (effCond(bi, pi) === 'broken') brokenCount++;
+  }));
 
-  // Each find further out damages the weakest piece one step: crumbling before cracked before solid,
-  // foundations first. Past crumbling a chunk breaks off. Nothing falls out of the structure until it caves in.
+  const targetBroken = Math.round(tier.dmg * totalPieces);
+  const toBreak = Math.max(0, targetBroken - brokenCount);
+
+  if (toBreak === 0) {
+    renderSite($('site-area'), { tilt: 0 });
+    return;
+  }
+
+  // Break the weakest pieces first (same selection logic as before)
   const justHit = [], justBroken = [];
-  for (let k = 0; k < wrongCount; k++) {
+  for (let k = 0; k < toBreak; k++) {
     const cands = [];
     site.bands.forEach((b, bi) => {
       if (!state.siteConds[bi]) return;
@@ -3540,29 +3548,25 @@ function excavate(offsets, bonus = 0) {
         if (ec !== 'broken') cands.push({ id: bi + '-' + pi, v: COND_VUL[ec], bi, pi, ec, edge: Math.abs(pi - (b.pieces.length - 1) / 2) });
       });
     });
-    if (!cands.length) { state.towerStability -= PULL_COST; continue; } // nothing left to break: the ground gives
+    if (!cands.length) break;
     cands.sort((a, b) => b.v - a.v || b.bi - a.bi || b.edge - a.edge || a.pi - b.pi);
     const c = cands[0];
-    // Cost follows the layer's material: pristine work always resists better, even once damaged
-    const cost = state.siteConds[c.bi] === 'pristine' ? PRISTINE_COST : PULL_COST;
     state.pieceDmg[c.id] = (state.pieceDmg[c.id] || 0) + 1;
-    lastPulledBlocks.push({ id: c.id, cost });
+    // Keep damaging until broken (may need multiple hits)
+    while (effCond(c.bi, c.pi) !== 'broken') {
+      state.pieceDmg[c.id]++;
+    }
     if (!justHit.includes(c.id)) justHit.push(c.id);
-    if (effCond(c.bi, c.pi) === 'broken') justBroken.push(c.id);
-    state.towerStability -= cost;
+    justBroken.push(c.id);
   }
 
-  if (wrongCount === 0 && nearCount === 0) state.towerStability += 5; // a perfect round
-  state.towerStability += bonus;
+  renderSite($('site-area'), { justHit, justBroken, tilt: 0 });
 
-  state.towerStability = Math.max(0, Math.min(100, state.towerStability));
-  updateStabilityUI();
-  renderSite($('site-area'), { justHit, justBroken, tilt: siteTilt() });
-  // Add hairline cracks when wrong answers damage the site
-  if (wrongCount > 0) {
+  // Add hairline cracks when pieces break
+  if (justBroken.length > 0) {
     const cracksEl = $('site-area').querySelector('.site-cracks');
     if (cracksEl) {
-      for (let c = 0; c < wrongCount; c++) {
+      for (let c = 0; c < Math.min(justBroken.length, 3); c++) {
         const crack = document.createElement('div');
         crack.className = 'site-crack ' + (Math.random() > 0.5 ? 'h' : 'v');
         crack.style.left = (15 + Math.random() * 70) + '%';
@@ -3572,32 +3576,19 @@ function excavate(offsets, bonus = 0) {
         cracksEl.appendChild(crack);
       }
     }
-  }
-  saveState();
-  routeAfterPulls();
-}
-
-function routeAfterPulls() {
-  if (state.towerStability <= 0) {
-    $('btn-next').hidden = true;
-    setTimeout(() => triggerCollapse(), 800);
-  } else {
-    $('btn-next').hidden = false;
+    // Brief shake
+    const siteEl = $('site-area');
+    if (siteEl) { siteEl.classList.remove('anim-site-hit'); siteEl.offsetHeight; siteEl.classList.add('anim-site-hit'); }
   }
 }
 
-function triggerCollapse() {
-  state.towerCollapsed = true;
-  state.failed = true;
-  state.failedAt = `Excavation round ${state.round + 1} — cave-in`;
-  state.finished = true;
-  renderSite($('site-area'), { collapsed: true, tilt: 0 });
-  const content = $('content');
-  content.classList.add('shake');
-  content.addEventListener('animationend', () => content.classList.remove('shake'), { once: true });
+// After an excavation answer, update the ruin to reflect the running score
+function afterExcavation() {
+  updateRuinDamage();
   saveState();
-  setTimeout(() => showGameOver('collapse'), 2200);
 }
+
+// (cave-in system removed — the ruin is now a visual scorecard, never ends the game)
 
 window.addEventListener('resize', () => {
   ['site-area', 'result-site'].forEach(id => { const el = $(id); if (el && el._pieces) fitSite(el, id === 'result-site' ? 0.82 : 0.9); });
@@ -3640,7 +3631,6 @@ function renderRound() {
     $('q-format').textContent = FORMAT_NAMES[ratioQs[state.round].fmt] || '';
     $('estimate-ui').hidden = false;
     $('stack-ui').hidden = true;
-    $('stability-row').hidden = true;
     $('btn-lock').hidden = false;
     setupSurveyInput(ratioQs[state.round]);
     renderSite($('site-area'), { tilt: 0 });
@@ -3659,11 +3649,9 @@ function renderRound() {
     $('q-format').hidden = !stackQs.some(q => q.kind && q.kind !== 'strata');
     $('q-format').textContent = TRENCH_NAMES[kind];
     $('stack-ui').hidden = false;
-    $('stability-row').hidden = false;
     if (kind === 'strata') { state.stackOrder = [...sq.shuffled]; renderStackItems(); }
     else { state.picks = []; renderPickItems(); }
-    updateStabilityUI();
-    renderSite($('site-area'), { tilt: siteTilt() });
+    renderSite($('site-area'), { tilt: 0 });
     $('btn-lock').disabled = false;
   }
   startTorch();
@@ -4061,13 +4049,6 @@ function lockEstimate() {
   const band = currentSite().bands[bi];
   const cond = condFor(diff);
   state.siteConds.push(cond);
-  let lost = 0;
-  if (score === 0 && band && band.pieces.length >= 2) {
-    const n = band.pieces.length;
-    const miss = diff >= 45 && n >= 4 ? 2 : 1;
-    [n - 1, 0].slice(0, miss).forEach(pi => { state.pieceDmg[bi + '-' + pi] = 1; });
-    lost = miss;
-  }
 
   // Build the visual with markers hidden, ready for staggered reveal
   const clampL = v => Math.min(86, Math.max(14, v));
@@ -4142,14 +4123,15 @@ function lockEstimate() {
     addBarFractures(bar, score);
   });
 
-  // Beat 4 (900ms): Layer brushes in
+  // Beat 4 (900ms): Layer brushes in + ruin updates to reflect running score
   queueAnim(900, () => {
     renderSite($('site-area'), { freshBand: bi, tilt: 0 });
     if (band) {
       const fl = $('feedback-layer');
-      fl.innerHTML = `<span class="swatch cond-${cond}"></span><span>Uncovered: the ${band.name}, ${cond}${lost ? `, and ${lost === 1 ? 'a chunk has' : 'two chunks have'} broken off` : ''}</span>`;
+      fl.innerHTML = `<span class="swatch cond-${cond}"></span><span>Uncovered: the ${band.name}, ${cond}</span>`;
       fl.hidden = false;
     }
+    updateRuinDamage();
   });
 
   saveState();
@@ -4233,16 +4215,14 @@ function lockStack() {
     $('feedback-score').classList.remove('anim-hidden');
     $('feedback-score').classList.add('anim-score-settle');
     $('feedback-detail').classList.remove('anim-hidden');
-    // Run excavation damage after reveals complete
-    excavate(offsets);
+    // Update ruin to reflect running score
+    afterExcavation();
   });
 
   saveState();
 }
 
 // Intrusive find, Forgery, Pick the pair: right scores 100, wrong scores nothing.
-// For the site, a right answer counts like an exact find (it steadies it) and a wrong pick like a
-// find two or more places out (it damages a piece). A matched pair also wins back PAIR_RESTORE.
 function lockPick() {
   const sq = stackQs[state.round], picks = [...(state.picks || [])].sort((a, b) => a - b);
   const hits = picks.filter(i => sq.answer.includes(i)).length;
@@ -4250,7 +4230,7 @@ function lockPick() {
   const right = hits === sq.answer.length;
   const score = isPair ? (right ? 100 : hits === 1 ? 40 : 0) : right ? 100 : 0;
   const emoji = score === 100 ? '🟩' : score >= 40 ? '🟧' : '🟥';
-  // Two wrong-pick hits for a miss; a half-right pair loses one piece; nothing picked counts as a miss
+  // Offsets stored for crowd stats (not used for damage — ruin damage is score-driven)
   const offsets = right ? sq.answer.map(() => 0) : isPair ? (hits === 1 ? [0, 2] : [2, 2]) : [2, 2];
   const head = {
     intrusive: right ? 'Intruder found' : picks.length ? 'That one belonged' : 'No find picked',
@@ -4346,9 +4326,9 @@ function lockPick() {
     if (isPair && right) {
       note.hidden = false;
       note.className = 'feedback-note won';
-      note.textContent = `A matched pair steadies the site: +${PAIR_RESTORE}% stability`;
+      note.textContent = 'Pair matched!';
     }
-    excavate(offsets, isPair && right ? PAIR_RESTORE : 0);
+    afterExcavation();
   });
 
   saveState();
@@ -4370,26 +4350,19 @@ function advance() {
   state.locked = false;
   state.round++;
   state.totalRound++;
-  lastPulledBlocks = []; // Clear save opportunity
+  // Clear round state
   if (state.phase === 'estimate' && state.round >= 5) {
     state.phase = 'stack'; state.round = 0;
     const ratioTotal = state.scores.filter(s => s.phase === 'estimate').reduce((a, s) => a + s.score, 0);
 
-    // Set starting stability based on estimate performance
-    if (ratioTotal >= 360) state.towerStability = 100;
-    else if (ratioTotal >= 215) state.towerStability = 80;
-    else state.towerStability = 60;
-
-    // Tower was already built during estimate phase — just reset collapse state
-    state.towerCollapsed = false;
-
     saveState(); setPalette(state.totalRound);
 
+    const surveyTier = ruinTier(ratioTotal, 500);
     $('inter-phase').textContent = 'Phase Two';
     $('inter-desc').textContent = stackQs.some(q => q.kind && q.kind !== 'strata')
-      ? `Your survey uncovered ${currentSite().name.replace(/^The /, 'the ')}. Now work five trenches: put finds in order, then spot an intruder, a forgery and a pair. Mistakes knock pieces out of it.`
-      : `Your survey uncovered ${currentSite().name.replace(/^The /, 'the ')}. Now catalogue five finds each round — anything more than one place out knocks a piece out of it.`;
-    $('inter-lives').textContent = `The site starts at ${state.towerStability}% stability`;
+      ? `Your survey uncovered ${currentSite().name.replace(/^The /, 'the ')}. Now work five trenches: put finds in order, then spot an intruder, a forgery and a pair.`
+      : `Your survey uncovered ${currentSite().name.replace(/^The /, 'the ')}. Now catalogue five finds each round.`;
+    $('inter-lives').textContent = `Survey: ${ratioTotal}/500 — the site looks ${surveyTier.name.toLowerCase()}`;
     showScreen('inter-screen'); return;
   }
   if (state.phase === 'stack' && state.round >= 5) {
@@ -4400,11 +4373,6 @@ function advance() {
 
 // A refresh after locking in must not allow a re-answer: finish the round as it stood.
 function resumeAfterLock() {
-  if (state.phase === 'stack' && state.towerStability <= 0) {
-    state.towerCollapsed = true; state.failed = true; state.finished = true;
-    state.failedAt = `Excavation round ${state.round + 1} — cave-in`;
-    saveState(); openReport(); return;
-  }
   advance();
 }
 
@@ -4457,7 +4425,7 @@ async function sendScore() {
   try {
     const r = await fetch(CROWD_API + '/api/score', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: dateStr, device, total: Math.min(1000, summarise(state).total), standing: !state.towerCollapsed, rounds: crowdRounds() }),
+      body: JSON.stringify({ date: dateStr, device, total: Math.min(1000, summarise(state).total), standing: true, rounds: crowdRounds() }),
     });
     if (r.ok) crowd = await r.json();
   } catch (e) {}
@@ -4536,17 +4504,16 @@ function showResults() {
   const stkScore = stk.reduce((a, s) => a + s.score, 0);
 
   const desk = document.querySelector('.results-desk');
-  desk.classList.toggle('failed', !!state.failed);
+  desk.classList.remove('failed');
 
   // Header
   $('journal-stamp').textContent = isPractice ? `Practice dig · ${themeName()}` : `Carbon Dated · Dig #${puzzleNum} · ${themeName()}`;
-  document.querySelector('.journal-title').textContent = state.failed ? 'Dig Failed' : 'Field Report';
+  document.querySelector('.journal-title').textContent = 'Field Report';
   $('journal-date').textContent = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const fb = $('fr-failed');
-  fb.hidden = !state.failed;
-  fb.textContent = state.towerCollapsed ? '⚠ Cave-in — dig terminated' : '⚠ Dig terminated';
+  fb.hidden = true;
   $('survey-score').textContent = total;
-  $('survey-rating').textContent = state.failed ? `Failed at ${state.failedAt}` : getSurveyRating(total);
+  $('survey-rating').textContent = getSurveyRating(total);
   $('fr-prov').hidden = !(state.provenance > 0);
   const fst = forgerStatus();
   $('fr-forger-wrap').hidden = !fst;
@@ -4568,25 +4535,23 @@ function showResults() {
   const site = currentSite();
   applySitePalette();
   $('fr-site-h').textContent = site.name;
-  const resTilt = !stk.length || state.towerCollapsed ? 0 : state.towerStability > 60 ? 0 : state.towerStability > 30 ? -2 : -4;
-  renderSite($('result-site'), { rubble: !!state.towerCollapsed, tilt: resTilt, factor: 0.82 });
+  renderSite($('result-site'), { tilt: 0, factor: 0.82 });
   const status = $('fr-status');
   if (stk.length === 0) {
     status.className = 'tower-status collapsed-status';
     status.textContent = 'Excavation not reached';
-  } else if (state.towerCollapsed) {
-    status.className = 'tower-status collapsed-status';
-    status.textContent = '⛏ Cave-in';
   } else {
+    const tier = ruinTierFromTotal(total);
     status.className = 'tower-status standing';
-    status.textContent = `⛏ Still standing at ${state.towerStability}%`;
+    status.textContent = `🏛 ${tier.name}`;
   }
   let pulledN = 0;
   site.bands.forEach((b, bi) => b.pieces.forEach((p, pi) => { if (effCond(bi, pi) === 'broken') pulledN++; }));
   const totalPieces = site.bands.reduce((a, b) => a + b.pieces.length, 0);
+  const finalTier = stk.length ? ruinTierFromTotal(total) : null;
   const stats = [
     ['Layers uncovered', (state.siteConds || []).length + ' of 5'],
-    ['Stability', stk.length ? (state.towerCollapsed ? '0%' : state.towerStability + '%') : '—'],
+    ['Site condition', stk.length ? finalTier.name : '—'],
     ['Pieces broken', `${pulledN} of ${totalPieces}`],
   ];
   $('fr-stats').innerHTML = stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
@@ -4726,7 +4691,9 @@ function saveHistory(h) { try { localStorage.setItem(HIST_KEY, JSON.stringify(h)
 function summarise(st) {
   const est = st.scores.filter(s => s.phase === 'estimate').reduce((a, s) => a + s.score, 0);
   const stk = st.scores.filter(s => s.phase === 'stack').reduce((a, s) => a + s.score, 0);
-  return { total: est + stk, est, stk, max: st.v === 2 ? 1000 : 1400, failed: !!st.failed, site: st.towerCollapsed ? 0 : st.towerStability, ruin: st.v === 2 ? siteKey() : undefined, standing: !st.towerCollapsed };
+  const t = est + stk;
+  const tier = ruinTierFromTotal(t);
+  return { total: t, est, stk, max: st.v === 2 ? 1000 : 1400, failed: false, site: tier.name, ruin: st.v === 2 ? siteKey() : undefined, standing: true };
 }
 
 function recordResult() {
@@ -4826,9 +4793,9 @@ function renderHistory(h) {
     const k = localKey(d), r = h[k];
     const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     if (!r) { bars.push(`<div class="hb empty" title="${label}: not played"></div>`); continue; }
-    const cls = 'hb' + (i === 0 ? ' today' : '') + (r.failed ? ' failed' : '');
+    const cls = 'hb' + (i === 0 ? ' today' : '');
     const pct = Math.max(5, Math.round((r.total / (r.max || 1400)) * 100));
-    bars.push(`<div class="${cls}" style="height:${pct}%" title="${label}: ${r.total}${r.failed ? ' (failed)' : ''}"></div>`);
+    bars.push(`<div class="${cls}" style="height:${pct}%" title="${label}: ${r.total}"></div>`);
   }
   $('hist-bars').innerHTML = bars.join('');
   // Digger rank and how far to the next one
@@ -4860,14 +4827,15 @@ function buildShareText() {
   ];
   if (stk.length) {
     lines.push(`⛏ ${stk.map(s => s.emoji).join('')} ${stkScore}`);
-    lines.push(state.towerCollapsed ? `🏛 ${currentSite().name} caved in` : `🏛 ${currentSite().name} stands at ${state.towerStability}%`);
+    const shareTier = ruinTierFromTotal(total);
+    lines.push(`🏛 ${currentSite().name} — ${shareTier.name}`);
   }
   const fst = forgerStatus();
   if (fst === 'unmasked') lines.push(`🏺 Uncovered ${forger.artefact}`);
   else if (fst === 'fooled') lines.push('🏺 The artefact stayed buried');
   else if (fst === 'escaped') lines.push('🏺 The artefact stayed buried');
   lines.push('');
-  lines.push(`${total.toLocaleString('en-GB')} / 1,000${state.provenance ? ' (+50)' : ''} · ${state.failed ? 'Dig failed' : getSurveyRating(total)}`);
+  lines.push(`${total.toLocaleString('en-GB')} / 1,000${state.provenance ? ' (+50)' : ''} · ${getSurveyRating(total)}`);
   // How it ranks today, once enough people have played for it to mean something
   const rank = crowdRank();
   if (rank && rank.n >= CHART_MIN) {
@@ -4890,9 +4858,8 @@ function renderShareCard() {
   const total = estScore + stkScore;
   const sq = list => list.map(s => `<i class="${{'🟩':'g','🟨':'y','🟧':'o','🟥':'r'}[s.emoji] || 'r'}"></i>`).join('');
   const streak = isPractice ? 0 : streakStats(loadHistory()).cur;
-  const site = !stk.length ? '' : state.towerCollapsed
-    ? `<span class="sc-site down">${currentSite().name.replace(/^The /, '')} caved in</span>`
-    : `<span class="sc-site up">${currentSite().name.replace(/^The /, '')} stands at ${state.towerStability}%</span>`;
+  const cardTier = stk.length ? ruinTierFromTotal(total) : null;
+  const site = !stk.length ? '' : `<span class="sc-site up">${currentSite().name.replace(/^The /, '')} — ${cardTier.name}</span>`;
   $('share-card').innerHTML = `
     <div class="sc-head"><span class="sc-brand">Carbon Dated</span><span class="sc-dig">${isPractice ? 'PRACTICE' : 'DIG #' + puzzleNum}</span></div>
     <div class="sc-theme">${themeName()}</div>
@@ -4904,7 +4871,7 @@ function renderShareCard() {
     </div>
     <div class="sc-foot">
       <div class="sc-total">${total.toLocaleString('en-GB')}<small>/ 1,000</small></div>
-      <div class="sc-rank ${state.failed ? 'failed' : ''}"><strong>${state.failed ? 'Dig failed' : getSurveyRating(total)}</strong>${streak > 1 ? `🔥 ${streak}-day streak` : ''}</div>
+      <div class="sc-rank"><strong>${getSurveyRating(total)}</strong>${streak > 1 ? `🔥 ${streak}-day streak` : ''}</div>
     </div>`;
 }
 
@@ -5197,16 +5164,15 @@ function freshState() {
   return {
     phase: 'estimate', round: 0, totalRound: 0, locked: false, guess: 50,
     stackOrder: [], scores: [], finished: false,
-    lives: 3, failed: false, failedAt: null,
-    v: 2, fv: 1, forgerResult: null, forgerDeadline: null, towerStability: 100,
-    siteConds: [], pieceDmg: {}, towerCollapsed: false,
+    v: 2, fv: 1, forgerResult: null, forgerDeadline: null,
+    siteConds: [], pieceDmg: {},
   };
 }
 
 function startPractice(cat) {
   stopTorch();
   buildPuzzle(cat);
-  state = freshState(); lastPulledBlocks = []; selectedIdx = null;
+  state = freshState(); selectedIdx = null;
   $('game-over-overlay').classList.remove('active');
   $('practice-picker').hidden = true;
   $('practice-picker-r').hidden = true;
@@ -5218,7 +5184,7 @@ function startPractice(cat) {
 function backToDaily() {
   practiceSite = null;
   buildPuzzle(null);
-  state = freshState(); lastPulledBlocks = []; selectedIdx = null;
+  state = freshState(); selectedIdx = null;
   routeDaily();
 }
 
@@ -5237,7 +5203,6 @@ $('btn-back-daily').addEventListener('click', backToDaily);
 function resetPuzzle() {
   try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
   state = freshState();
-  lastPulledBlocks = [];
   renderStreakChip();
   showScreen('start-screen'); setPalette(0);
 }
