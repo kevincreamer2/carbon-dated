@@ -1281,10 +1281,10 @@ input[type="range"]::-moz-range-thumb {
   <div class="streak-chip rank-chip" id="rank-chip" hidden></div>
   <div class="divider"></div>
   <div class="tagline">Survey, then excavate. Ten rounds to uncover today's ancient site, and keep it standing.</div>
-  <div class="build-stamp">Build 7 Nov · 21:45</div>
+  <div class="build-stamp" id="build-stamp" hidden>Build 7 Nov · 22:10</div>
   <div class="how-to glass">
     <div class="how-row"><div class="how-icon">🎯</div><div><strong>Survey (rounds 1–5)</strong><br>Five quick guesses: two percentages, two <em>Carbon date it</em> years and one <em>Pinpoint</em> on a line. Each answer brushes away a layer of the mound. The closer you are, the better the ruin underneath has survived.</div></div>
-    <div class="how-row"><div class="how-icon">⛏</div><div><strong>Excavate (rounds 6–10)</strong><br>Five trenches. Two are <em>Strata</em>: put five finds in order — drag, or tap two to swap. The others are an <em>Intrusive find</em> (spot the one that doesn't belong), a <em>Forgery</em> (spot the fake label) and <em>Pick the pair</em> (tap the two that share a link — a match steadies the site). Mistakes knock pieces out of the ruin; at 0% stability it caves in.</div></div>
+    <div class="how-row"><div class="how-icon">⛏</div><div><strong>Excavate (rounds 6–10)</strong><br>Five trenches. Two are <em>Strata</em>: put five finds in order — drag, or tap two to swap. The others are an <em>Intrusive find</em> (spot the one that doesn't belong), a <em>Forgery</em> (spot the fake label) and <em>Pick the pair</em> (tap the two that share a link). The ruin shows how your dig is going: good answers keep it standing tall, misses wear it down.</div></div>
     <div class="how-row"><div class="how-icon">🔥</div><div><strong>The torch</strong><br>You get 15 seconds for each survey question, 45 for a Strata trench and 30 for the others. When the torch burns out, whatever you've set is locked in.</div></div>
   </div>
   <button class="btn-play" id="btn-start">Play</button>
@@ -4312,6 +4312,17 @@ function onDragEnd() {
 
 // ---- SLIDER ----
 // One slider serves all three survey formats: percentage (0–100), year, or a spot on a line (0–100)
+// The slider starts somewhere random between 15% and 85% of the line, and never within
+// 15% of the line of the answer, so locking in without moving it can't score well
+function randomStart(min, max, answer) {
+  const span = max - min;
+  let v;
+  for (let i = 0; i < 20; i++) {
+    v = Math.round(min + span * (0.15 + Math.random() * 0.7));
+    if (Math.abs(v - answer) >= span * 0.15) break;
+  }
+  return v;
+}
 function setupSurveyInput(q) {
   const f = q.fmt || 'pct', sl = $('slider'), labels = $('slider-labels'), gd = $('guess-display');
   labels.classList.toggle('pin-ends', f === 'pin');
@@ -4319,13 +4330,13 @@ function setupSurveyInput(q) {
   $('nudge-row').hidden = f !== 'date';
   if (f === 'date') {
     const t = dateTier(q.a), mid = Math.round((t.lo + t.hi) / 2);
-    sl.min = t.lo; sl.max = t.hi; state.guess = mid;
+    sl.min = t.lo; sl.max = t.hi; state.guess = randomStart(t.lo, t.hi, q.a);
     labels.innerHTML = `<span>${t.lo}</span><span>${mid}</span><span>${t.hi}</span>`;
   } else if (f === 'pin') {
-    sl.min = 0; sl.max = 100; state.guess = 50;
+    sl.min = 0; sl.max = 100; state.guess = randomStart(0, 100, (q.a - q.lo[1]) / (q.hi[1] - q.lo[1]) * 100);
     labels.innerHTML = `<span>${q.lo[0]}<small>${fmtNum(q.lo[1], q.u)}</small></span><span>${q.hi[0]}<small>${fmtNum(q.hi[1], q.u)}</small></span>`;
   } else {
-    sl.min = 0; sl.max = 100; state.guess = 50;
+    sl.min = 0; sl.max = 100; state.guess = randomStart(0, 100, q.a);
     labels.innerHTML = '<span>0%</span><span>50%</span><span>100%</span>';
   }
   sl.value = state.guess;
@@ -5498,6 +5509,8 @@ setInterval(async () => {
 }, 30000);
 backfillHistory();
 routeDaily();
+// The build stamp is for checking a deploy went live: add ?debug to the address to see it
+if (/[?&]debug\b/.test(location.search)) $('build-stamp').hidden = false;
 
 // Auto-play mode: ?autoplay — watch all animations without playing
 if (/[?&]autoplay\b/.test(location.search)) {
