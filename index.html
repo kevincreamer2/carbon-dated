@@ -20,6 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://playcarbondated.com/share.png">
 <!-- Cloudflare Web Analytics --><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "446eb273ee4d49479ea811cc37a283c3"}'></script><!-- End Cloudflare Web Analytics -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
 
 <style>
@@ -1009,8 +1010,41 @@ input[type="range"]::-moz-range-thumb {
   pointer-events: none;
 }
 .btn-share:active { opacity: 0.85; transform: scale(0.97); }
+.btn-share.generating { opacity: 0.65; pointer-events: none; }
 .share-toast { font-size: 0.82rem; color: var(--success); font-weight: 600; opacity: 0; transition: opacity 0.3s; }
 .share-toast.show { opacity: 1; }
+
+/* ---- Offscreen share image card ---- */
+#share-img-wrap {
+  position: fixed; left: -9999px; top: 0; z-index: -1;
+  pointer-events: none; overflow: hidden;
+}
+.si { width: 420px; padding: 0; background: linear-gradient(170deg, #FFFBF3, #F1E9DA); font-family: 'Karla', system-ui, sans-serif; }
+.si-top { position: relative; overflow: hidden; padding: 20px 24px 0; }
+.si-top::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 5px;
+  background: linear-gradient(90deg, #A9C7BB 0 25%, #C49A76 25% 50%, #A86C52 50% 75%, #DCC3A0 75%); }
+.si-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+.si-brand { font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 1.4rem; color: #23302C; letter-spacing: 0.02em; }
+.si-dig { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: #5C6A63; letter-spacing: 0.06em; }
+.si-theme { font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: #3E6F62; margin-bottom: 12px; }
+.si-site-wrap { position: relative; margin: 0 auto 8px; border-radius: 10px; overflow: hidden; }
+.si-rows { border-top: 1px dashed #D6C8AE; }
+.si-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 24px; border-bottom: 1px dashed #D6C8AE; }
+.si-k { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: #5C6A63; }
+.si-sq { display: flex; gap: 4px; }
+.si-sq i { width: 16px; height: 16px; border-radius: 3px; display: block; }
+.si-sq i.g { background: #3E6F62; } .si-sq i.y { background: #A9781C; }
+.si-sq i.o { background: #A86C52; } .si-sq i.r { background: transparent; box-shadow: inset 0 0 0 1.5px #A2543A; }
+.si-row b { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; color: #23302C; }
+.si-site-label { font-size: 0.82rem; font-weight: 600; }
+.si-site-label.down { color: #A2543A; } .si-site-label.up { color: #3E6F62; }
+.si-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; padding: 14px 24px 16px; }
+.si-total { font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 1.8rem; line-height: 1; color: #23302C; font-variant-numeric: tabular-nums; }
+.si-total small { font-family: 'Karla', sans-serif; font-size: 0.82rem; font-weight: 500; color: #5C6A63; margin-left: 4px; }
+.si-rank { text-align: right; font-size: 0.78rem; color: #5C6A63; line-height: 1.35; }
+.si-rank strong { display: block; font-family: 'Cinzel', Georgia, serif; color: #3E6F62; font-size: 0.88rem; }
+.si-rank.failed strong { color: #A2543A; }
+.si-url { display: flex; justify-content: center; padding: 0 24px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: #5C6A63; letter-spacing: 0.05em; }
 
 /* Expedition note */
 .expedition-footer {
@@ -4874,28 +4908,140 @@ function renderShareCard() {
     </div>`;
 }
 
+// Build an offscreen DOM card with the site visual + scores, capture it as an image
+function buildShareImage() {
+  const wrap = $('share-img-wrap');
+  const est = state.scores.filter(s => s.phase === 'estimate');
+  const stk = state.scores.filter(s => s.phase === 'stack');
+  const estScore = est.reduce((a, s) => a + s.score, 0);
+  const stkScore = stk.reduce((a, s) => a + s.score, 0);
+  const total = estScore + stkScore;
+  const streak = isPractice ? 0 : streakStats(loadHistory()).cur;
+
+  const sq = list => list.map(s => `<i class="${{'🟩':'g','🟨':'y','🟧':'o','🟥':'r'}[s.emoji] || 'r'}"></i>`).join('');
+
+  const siteLabel = !stk.length ? '' : state.towerCollapsed
+    ? `<span class="si-site-label down">${currentSite().name.replace(/^The /, '')} caved in</span>`
+    : `<span class="si-site-label up">${currentSite().name.replace(/^The /, '')} stands at ${state.towerStability}%</span>`;
+
+  const fst = forgerStatus();
+  const forgerRow = fst ? `<div class="si-row"><span class="si-k">Artefact</span><span class="si-site-label ${fst === 'unmasked' ? 'up' : 'down'}">${fst === 'unmasked' ? 'Uncovered' : 'Still buried'}</span><b>${state.provenance ? '+50' : ''}</b></div>` : '';
+
+  const rank = crowdRank();
+  let rankLine = '';
+  if (rank && rank.n >= CHART_MIN) {
+    const who = rank.mode === 'day' ? `${rank.n.toLocaleString('en-GB')} diggers today` : 'all diggers';
+    rankLine = rank.top <= 50 ? `Top ${rank.top}% of ${who}` : `Beat ${rank.beat}% of ${who}`;
+  }
+
+  const card = document.createElement('div');
+  card.className = 'si';
+  card.innerHTML = `
+    <div class="si-top">
+      <div class="si-head"><span class="si-brand">Carbon Dated</span><span class="si-dig">${isPractice ? 'PRACTICE' : 'DIG #' + puzzleNum}</span></div>
+      <div class="si-theme">${themeName()}</div>
+      <div class="si-site-wrap" id="share-site-clone"></div>
+    </div>
+    <div class="si-rows">
+      <div class="si-row"><span class="si-k">Survey</span><span class="si-sq">${sq(est)}</span><b>${estScore}</b></div>
+      ${stk.length ? `<div class="si-row"><span class="si-k">Excavate</span><span class="si-sq">${sq(stk)}</span><b>${stkScore}</b></div>
+      <div class="si-row"><span class="si-k">Site</span>${siteLabel}<span></span></div>` : ''}
+      ${forgerRow}
+    </div>
+    <div class="si-foot">
+      <div class="si-total">${total.toLocaleString('en-GB')}<small>/ 1,000</small></div>
+      <div class="si-rank ${state.failed ? 'failed' : ''}"><strong>${state.failed ? 'Dig failed' : getSurveyRating(total)}</strong>${streak > 1 ? ` 🔥 ${streak}-day streak` : ''}${rankLine ? `<br>${rankLine}` : ''}</div>
+    </div>
+    <div class="si-url">playcarbondated.com</div>`;
+
+  wrap.innerHTML = '';
+  wrap.appendChild(card);
+
+  // Clone the result-site into the share card (it's already rendered in the field report)
+  const srcSite = $('result-site');
+  if (srcSite) {
+    const clone = srcSite.cloneNode(true);
+    clone.id = '';
+    clone.style.cssText = 'width: 100%;';
+    const siteWrap = clone.querySelector('.site-wrap');
+    const scene = clone.querySelector('.site');
+    if (siteWrap && scene) {
+      const s = 372 / SCENE_W; // fit within 420px card minus padding
+      siteWrap.style.width = (SCENE_W * s) + 'px';
+      siteWrap.style.height = (SCENE_H * s) + 'px';
+      scene.style.transform = `scale(${s})`;
+    }
+    card.querySelector('.si-site-wrap').appendChild(clone);
+  }
+
+  return card;
+}
+
+async function captureShareImage() {
+  if (typeof html2canvas === 'undefined') return null;
+  const card = buildShareImage();
+  try {
+    const canvas = await html2canvas(card, {
+      scale: 2,
+      backgroundColor: '#F1E9DA',
+      useCORS: true,
+      logging: false,
+      width: 420,
+    });
+    return new Promise(resolve => {
+      canvas.toBlob(blob => resolve(blob), 'image/png');
+    });
+  } catch (e) {
+    console.warn('Share image capture failed:', e);
+    return null;
+  }
+}
+
 function showToast(msg) {
   const t = $('share-toast'); t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-function copyShare() {
+function copyShareText() {
   const text = buildShareText();
   try {
     navigator.clipboard.writeText(text).then(() => showToast('Copied — paste it anywhere')).catch(() => copyFallback(text));
   } catch(e) { copyFallback(text); }
 }
 
-// Use the phone's share sheet where there is one; otherwise copy
+// Share as image (with text fallback)
 $('btn-share').addEventListener('click', async () => {
-  const text = buildShareText();
-  if (navigator.share) {
-    try { await navigator.share({ text }); return; }
-    catch (e) { if (e && e.name === 'AbortError') return; }
+  const btn = $('btn-share');
+  btn.classList.add('generating');
+  try {
+    const blob = await captureShareImage();
+    if (blob && navigator.share && navigator.canShare) {
+      const file = new File([blob], 'carbon-dated.png', { type: 'image/png' });
+      const shareData = { files: [file], text: buildShareText() };
+      if (navigator.canShare(shareData)) {
+        try { await navigator.share(shareData); btn.classList.remove('generating'); return; }
+        catch (e) { if (e && e.name === 'AbortError') { btn.classList.remove('generating'); return; } }
+      }
+    }
+    // Fallback: try to copy the image to clipboard
+    if (blob) {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ]);
+        showToast('Image copied — paste it anywhere');
+        btn.classList.remove('generating');
+        return;
+      } catch (e) { /* clipboard image not supported, fall through to text */ }
+    }
+    // Final fallback: copy text
+    copyShareText();
+  } catch (e) {
+    copyShareText();
   }
-  copyShare();
+  btn.classList.remove('generating');
 });
-$('btn-copy').addEventListener('click', copyShare);
+$('btn-copy').addEventListener('click', copyShareText);
 
 function copyFallback(text) {
   const ta = document.createElement('textarea');
@@ -5209,5 +5355,6 @@ if (/[?&]autoplay\b/.test(location.search)) {
 }
 </script>
 
+<div id="share-img-wrap"></div>
 
 </body></html>
