@@ -171,16 +171,25 @@ button { font-family: var(--body); cursor: pointer; border: none; }
 
 .btn-play {
   background: var(--accent); color: #fff; font-size: 1.05rem; font-weight: 700;
-  padding: 14px 48px; border-radius: 50px; width: 100%; max-width: 300px;
+  padding: 14px 48px; border-radius: 2px; width: 100%; max-width: 300px;
   transition: opacity 0.15s, transform 0.15s;
-  box-shadow: 0 4px 14px -6px rgba(35,48,44,0.45);
-  letter-spacing: 0.02em;
+  box-shadow: 2px 3px 0 rgba(26,36,32,0.06);
+  border: 2px solid rgba(255,255,255,0.15);
+  outline: 1px solid rgba(255,255,255,0.08); outline-offset: 3px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+  letter-spacing: 0.04em; position: relative;
+}
+.btn-play::after {
+  content: ''; position: absolute;
+  top: 4px; bottom: 4px; left: 4px; right: 4px;
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 1px;
+  pointer-events: none;
 }
 .btn-play:active { opacity: 0.85; transform: scale(0.97); }
 
 /* Progress bar */
 .progress-bar { width: 100%; display: flex; gap: 4px; }
-.progress-pip { flex: 1; height: 5px; border-radius: 3px; background: var(--glass-border); transition: background 0.4s; }
+.progress-pip { flex: 1; height: 5px; border-radius: 1px; background: var(--glass-border); transition: background 0.4s; }
 .progress-pip.done { background: var(--accent); }
 .progress-pip.current { background: var(--gold); }
 
@@ -256,10 +265,19 @@ input[type="range"]::-moz-range-thumb {
 
 .btn-lock {
   background: var(--accent); color: #fff; font-size: 1rem; font-weight: 700;
-  padding: 12px 40px; border-radius: 50px;
+  padding: 12px 40px; border-radius: 2px;
   transition: opacity 0.15s, transform 0.15s;
-  box-shadow: 0 4px 14px -6px rgba(35,48,44,0.45);
-  letter-spacing: 0.02em;
+  box-shadow: 2px 3px 0 rgba(26,36,32,0.06);
+  border: 2px solid rgba(255,255,255,0.15);
+  outline: 1px solid rgba(255,255,255,0.08); outline-offset: 3px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+  letter-spacing: 0.04em; position: relative;
+}
+.btn-lock::after {
+  content: ''; position: absolute;
+  top: 4px; bottom: 4px; left: 4px; right: 4px;
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 1px;
+  pointer-events: none;
 }
 .btn-lock:active { opacity: 0.85; transform: scale(0.97); }
 .btn-lock:disabled { opacity: 0.3; cursor: default; transform: none; }
@@ -708,9 +726,19 @@ input[type="range"]::-moz-range-thumb {
 .nudge-row button:active { transform: scale(0.96); }
 .btn-next {
   background: var(--secondary); color: #fff; font-size: 1rem; font-weight: 700;
-  padding: 12px 40px; border-radius: 50px;
+  padding: 12px 40px; border-radius: 2px;
   transition: opacity 0.15s, transform 0.15s;
-  box-shadow: 0 3px 14px rgba(59,107,90,0.18);
+  box-shadow: 2px 3px 0 rgba(26,36,32,0.06);
+  border: 2px solid rgba(255,255,255,0.15);
+  outline: 1px solid rgba(255,255,255,0.08); outline-offset: 3px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+  letter-spacing: 0.04em; position: relative;
+}
+.btn-next::after {
+  content: ''; position: absolute;
+  top: 4px; bottom: 4px; left: 4px; right: 4px;
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 1px;
+  pointer-events: none;
 }
 .btn-next:active { opacity: 0.85; transform: scale(0.97); }
 
@@ -965,11 +993,20 @@ input[type="range"]::-moz-range-thumb {
 .share-area { width: 100%; display: flex; flex-direction: column; gap: 10px; align-items: center; padding-top: 4px; }
 .btn-share {
   background: var(--accent); color: #fff; font-size: 0.95rem; font-weight: 700;
-  padding: 13px 36px; border-radius: 50px; width: 100%; max-width: 300px;
+  padding: 13px 36px; border-radius: 2px; width: 100%; max-width: 300px;
   transition: opacity 0.15s, transform 0.15s;
-  box-shadow: 0 4px 14px -6px rgba(35,48,44,0.45);
-  letter-spacing: 0.03em;
+  box-shadow: 2px 3px 0 rgba(26,36,32,0.06);
+  border: 2px solid rgba(255,255,255,0.15);
+  outline: 1px solid rgba(255,255,255,0.08); outline-offset: 3px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+  letter-spacing: 0.04em; position: relative;
   display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-share::after {
+  content: ''; position: absolute;
+  top: 4px; bottom: 4px; left: 4px; right: 4px;
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 1px;
+  pointer-events: none;
 }
 .btn-share:active { opacity: 0.85; transform: scale(0.97); }
 .share-toast { font-size: 0.82rem; color: var(--success); font-weight: 600; opacity: 0; transition: opacity 0.3s; }
@@ -1015,10 +1052,20 @@ input[type="range"]::-moz-range-thumb {
 }
 .btn-see-results {
   background: var(--accent); color: #fff; font-size: 0.95rem; font-weight: 700;
-  padding: 12px 36px; border-radius: 50px;
-  box-shadow: 0 4px 14px -6px rgba(35,48,44,0.45);
+  padding: 12px 36px; border-radius: 2px;
+  box-shadow: 2px 3px 0 rgba(26,36,32,0.06);
+  border: 2px solid rgba(255,255,255,0.15);
+  outline: 1px solid rgba(255,255,255,0.08); outline-offset: 3px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+  letter-spacing: 0.04em; position: relative;
   transition: opacity 0.15s, transform 0.15s;
   margin-top: 4px;
+}
+.btn-see-results::after {
+  content: ''; position: absolute;
+  top: 4px; bottom: 4px; left: 4px; right: 4px;
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 1px;
+  pointer-events: none;
 }
 .btn-see-results:active { opacity: 0.85; transform: scale(0.97); }
 
@@ -2812,16 +2859,21 @@ function drawCats(rng, n, cap, pool) {
   }
   return out;
 }
-// A day's topics: five for the survey, five for the excavation, at least four different topics overall
+// A day's topics: five for the survey, five for the excavation, minimal overlap between the two phases
 function dayMix(seedKey) {
   const rng = seededRNG(hashDate('mix-' + seedKey));
   const sPool = CAT_ORDER.filter(c => catRatios(c).length), kPool = CAT_ORDER.filter(c => catStacks(c).length);
-  let mix;
-  for (let t = 0; t < 30; t++) {
-    mix = { s: drawCats(rng, 5, 2, sPool), k: drawCats(rng, 5, 2, kPool) };
-    if (new Set([...mix.s, ...mix.k]).size >= 4) break;
+  let best = null, bestOverlap = Infinity;
+  for (let t = 0; t < 40; t++) {
+    const mix = { s: drawCats(rng, 5, 2, sPool), k: drawCats(rng, 5, 2, kPool) };
+    const unique = new Set([...mix.s, ...mix.k]).size;
+    if (unique < 4) continue;
+    // Count how many categories appear in both phases
+    const sSet = new Set(mix.s), overlap = mix.k.filter(c => sSet.has(c)).length;
+    if (overlap < bestOverlap) { best = mix; bestOverlap = overlap; }
+    if (overlap === 0) break;
   }
-  return mix;
+  return best;
 }
 // How often each topic was drawn on earlier days, so each topic's questions rotate without repeats
 function usageBefore(dayIdx) {
