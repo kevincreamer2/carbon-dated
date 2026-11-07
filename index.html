@@ -1281,7 +1281,7 @@ input[type="range"]::-moz-range-thumb {
   <div class="streak-chip rank-chip" id="rank-chip" hidden></div>
   <div class="divider"></div>
   <div class="tagline">Survey, then excavate. Ten rounds to uncover today's ancient site, and keep it standing.</div>
-  <div class="build-stamp">Build 5 Nov · 20:45</div>
+  <div class="build-stamp">Build 7 Nov · 21:45</div>
   <div class="how-to glass">
     <div class="how-row"><div class="how-icon">🎯</div><div><strong>Survey (rounds 1–5)</strong><br>Five quick guesses: two percentages, two <em>Carbon date it</em> years and one <em>Pinpoint</em> on a line. Each answer brushes away a layer of the mound. The closer you are, the better the ruin underneath has survived.</div></div>
     <div class="how-row"><div class="how-icon">⛏</div><div><strong>Excavate (rounds 6–10)</strong><br>Five trenches. Two are <em>Strata</em>: put five finds in order — drag, or tap two to swap. The others are an <em>Intrusive find</em> (spot the one that doesn't belong), a <em>Forgery</em> (spot the fake label) and <em>Pick the pair</em> (tap the two that share a link — a match steadies the site). Mistakes knock pieces out of the ruin; at 0% stability it caves in.</div></div>
@@ -2773,8 +2773,12 @@ function dateTier(a) {
 }
 function fmtNum(v, u) {
   if (u === 'year') return String(Math.round(v));
-  const r = Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10;
-  return r.toLocaleString('en-GB') + (u === 'min' ? ' min' : ' ' + u);
+  if (u === 'time') { const t = Math.round(v); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
+  const r = Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10, n = r.toLocaleString('en-GB');
+  if (u === '£') return '£' + n;
+  if (!u) return n;
+  if (u === '%' || u === '°C') return n + u;
+  return n + ' ' + u;
 }
 // How often each format-and-topic pairing came up on earlier days, so each pool rotates without repeats
 function surveyUsageBefore(dayIdx) {
@@ -2937,6 +2941,549 @@ function bankRunway(maxDays = 730) {
 }
 if (typeof window !== 'undefined') window.bankRunway = bankRunway;
 
+// ---- QUESTION BANK, FROM 8 NOV 2026 ----
+// Reviewed bank: 11 topics, each with Percentage, Carbon date it, Pinpoint, Strata, Intrusive find, Forgery and Pick the pair questions.
+// Every question has a fixed id. Each is asked once; when a topic runs short the round borrows an unused question of the same kind from another topic.
+// To add questions, give them new ids (never reuse or change an id): nothing already scheduled moves.
+const NEW_BANK_START = '2026-11-08';
+Object.assign(CATEGORIES, { pop: { name: 'Pop Culture' }, filmtv: { name: 'Film & TV' }, litart: { name: 'Literature & Art' }, histsci: { name: 'History & Science' }, food: { name: 'Food & Drink' } });
+const NB_PCT = [
+  {"c": "histsci", "id": "q001", "q": "What % of Henry VIII's wives outlived him?", "a": 33, "f": "The rhyme says only the last one 'survived', but Anne of Cleves, the divorced one, outlived him by ten years."},
+  {"c": "sport", "id": "q002", "q": "What % of a Premier League match is the ball actually in play?", "a": 55, "f": "The rest is throw-ins, free kicks and someone rolling around holding their shin."},
+  {"c": "food", "id": "q003", "q": "What % of a cucumber is water?", "a": 96, "f": "So a cucumber sandwich is mostly a water sandwich."},
+  {"c": "gk", "id": "q015", "q": "What % of the 40 squares on a UK Monopoly board can you actually buy?", "a": 70, "f": "The other 12 are Go, Jail, taxes, Chance, Community Chest and a car park where nothing happens."},
+  {"c": "pop", "id": "q020", "q": "What % of the Spice Girls were called Mel?", "a": 40, "f": "Scary and Sporty. The other three had to make do with one name each."},
+  {"c": "music", "id": "q029", "q": "What % of ABBA were born in Sweden?", "a": 75, "f": "Anni-Frid Lyngstad was born in Norway, so ABBA were technically only three-quarters Swedish."},
+  {"c": "culture", "id": "q034", "q": "What % of the gifts in The Twelve Days of Christmas are birds?", "a": 50, "f": "Some say the five gold rings were ring-necked pheasants too, which would make it seven."},
+  {"c": "world", "id": "q038", "q": "What % of Canadians live within 100 km of the US border?", "a": 66, "f": "More than half of all Canadians live further south than Seattle."},
+  {"c": "histsci", "id": "q048", "q": "What % of Earth's history have humans been around for?", "a": 0, "f": "Squeeze Earth's history into one day and we turn up about six seconds before midnight."},
+  {"c": "food", "id": "q054", "q": "What % of the world's vanilla comes from Madagascar?", "a": 80, "f": "Every flower has to be pollinated by hand, which is why it costs so much."},
+  {"c": "sport", "id": "q060", "q": "What % of holes on St Andrews' Old Course share their green with another hole?", "a": 78, "f": "Only the 1st, 9th, 17th and 18th get a green to themselves."},
+  {"c": "gk", "id": "q067", "q": "What % of a standard deck of cards are face cards?", "a": 23, "f": "The king of hearts is the only king without a moustache."},
+  {"c": "pop", "id": "q072", "q": "What % of the Teletubbies have a triangle on their head?", "a": 25, "f": "Tinky Winky. Dipsy's is straight, Laa-Laa's is curly and Po's is a circle."},
+  {"c": "tech", "id": "q079", "q": "What % of the world's population uses the internet?", "a": 68, "f": "That still leaves around 2.6 billion people offline."},
+  {"c": "world", "id": "q085", "q": "What % of the world's people live in the Southern Hemisphere?", "a": 12, "f": "Most of the world's land is north of the equator too."},
+  {"c": "gk", "id": "q091", "q": "What % of the 22 balls on a snooker table are red?", "a": 68, "f": "Pot every red with a black after each, then all the colours, and you've made the maximum: 147."},
+  {"c": "gk", "id": "q092", "q": "What % of the months have 31 days?", "a": 58, "f": "The knuckle trick still works: knuckles are the 31s, the dips are the short ones."},
+  {"c": "gk", "id": "q093", "q": "What % of the alphabet are vowels?", "a": 19, "f": "Unless you count Y, which does the job in words like 'rhythm'."},
+  {"c": "pop", "id": "q116", "q": "What % of the streets on the classic UK Monopoly board are in London?", "a": 100, "f": "Every one of them. The Old Kent Road is the cheapest."},
+  {"c": "pop", "id": "q117", "q": "What % of The Monkees were British?", "a": 25, "f": "Davy Jones was from Manchester. David Bowie changed his name so nobody would mix them up."},
+  {"c": "pop", "id": "q118", "q": "On a solved Rubik's Cube, what % of the small squares are red?", "a": 17, "f": "There are about 43 quintillion ways to scramble one."},
+  {"c": "music", "id": "q139", "q": "What % of a piano's 88 keys are black?", "a": 41, "f": "The black keys on their own make a pentatonic scale, which is why noodling on them always sounds alright."},
+  {"c": "music", "id": "q140", "q": "What % of a string quartet is violins?", "a": 50, "f": "Two violins, a viola and a cello. The double bass isn't invited."},
+  {"c": "music", "id": "q141", "q": "What % of One Direction first auditioned for The X Factor as solo singers?", "a": 100, "f": "All five went in alone. The judges put them together as a group."},
+  {"c": "music", "id": "q142", "q": "In a bar of 4/4 time, what % of the bar is one crotchet?", "a": 25, "f": "Americans call it a quarter note, which rather gives the game away."},
+  {"c": "filmtv", "id": "q171", "q": "What % of the actors who've played James Bond in the official films were British?", "a": 67, "f": "George Lazenby was Australian and Pierce Brosnan Irish."},
+  {"c": "filmtv", "id": "q172", "q": "What % of the UK Office's 14 episodes were in the first series?", "a": 43, "f": "Twelve episodes and two Christmas specials. The American version made 201."},
+  {"c": "filmtv", "id": "q173", "q": "What % of the Fellowship of the Ring are hobbits?", "a": 44, "f": "Four hobbits, two men, a wizard, an elf and a dwarf."},
+  {"c": "filmtv", "id": "q174", "q": "What % of the six Friends were Gellers?", "a": 33, "f": "Ross and Monica. Rachel briefly made it three, after a drunken wedding in Las Vegas."},
+  {"c": "tech", "id": "q199", "q": "What % of the world's smartphones run Android?", "a": 70, "f": "Android was first designed for digital cameras."},
+  {"c": "tech", "id": "q200", "q": "What % of world trade travels by sea?", "a": 80, "f": "Your trainers, phone and bananas almost certainly came by boat."},
+  {"c": "tech", "id": "q201", "q": "What % of the money in the UK exists as notes and coins?", "a": 3, "f": "The other 97% is just numbers on bank computers."},
+  {"c": "tech", "id": "q202", "q": "What % of the alphabet is on the middle row of a QWERTY keyboard?", "a": 35, "f": "You can type 'typewriter' using only the top row."},
+  {"c": "litart", "id": "q233", "q": "What % of the Golden Ticket winners in Charlie and the Chocolate Factory were badly behaved?", "a": 80, "f": "Augustus, Veruca, Violet and Mike. Only Charlie left in one piece."},
+  {"c": "litart", "id": "q234", "q": "What % of Agatha Christie's novels feature Poirot?", "a": 50, "f": "She got so sick of him she wrote his death in the 1940s and kept it locked away for 30 years."},
+  {"c": "culture", "id": "q263", "q": "What % of the star signs are animals?", "a": 58, "f": "Libra is the only one that's an object: a set of scales."},
+  {"c": "culture", "id": "q264", "q": "What % of the Chinese zodiac animals are mythical?", "a": 8, "f": "The dragon is the only one you won't find in a zoo."},
+  {"c": "culture", "id": "q265", "q": "What % of England's eight bank holidays are for Christmas or Easter?", "a": 50, "f": "The rest are New Year's Day, two in May and one in August."},
+  {"c": "litart", "id": "q289", "q": "What % of the seven Narnia books involve the wardrobe?", "a": 14, "f": "Only one. The others get to Narnia by painting, ring, horn and train."},
+  {"c": "litart", "id": "q290", "q": "What % of Winnie-the-Pooh's main characters were based on real toys?", "a": 75, "f": "Owl and Rabbit were made up. Most of the real toys now live in New York Public Library."},
+  {"c": "histsci", "id": "q293", "q": "What % of the Moon's surface can we see from Earth?", "a": 59, "f": "Not just half. A slight wobble lets us peek round the edges."},
+  {"c": "food", "id": "q320", "q": "What % of the world's hazelnuts are bought by Ferrero, the maker of Nutella?", "a": 25, "f": "A quarter of the world's hazelnuts, mostly from Turkey."},
+  {"c": "food", "id": "q321", "q": "What % of the world's saffron comes from Iran?", "a": 90, "f": "It takes around 150 flowers, picked by hand, to make one gram."},
+  {"c": "food", "id": "q322", "q": "What % of tea drunk in Britain is made with teabags?", "a": 96, "f": "Teabags were an accident. A New York merchant sent samples in silk pouches and customers dunked them."},
+  {"c": "histsci", "id": "q348", "q": "What % of all the people who have ever lived are alive today?", "a": 7, "f": "Around 117 billion people have ever been born."},
+  {"c": "histsci", "id": "q349", "q": "What % of the people on the Titanic had a lifeboat seat available?", "a": 53, "f": "That was more than the law required at the time."},
+  {"c": "sport", "id": "q355", "q": "What % of the grass on Wimbledon's courts is ryegrass?", "a": 100, "f": "Cut to exactly 8 mm during the Championships."},
+  {"c": "sport", "id": "q356", "q": "What % of men's football World Cups have been won by European teams?", "a": 55, "f": "Brazil still have the most, with five."},
+  {"c": "world", "id": "q383", "q": "What % of Iceland's people live in and around Reykjavík?", "a": 62, "f": "There's an app Icelanders can use to check they aren't related before a date."},
+  {"c": "world", "id": "q384", "q": "What % of the Netherlands is below sea level?", "a": 26, "f": "Including Schiphol Airport."},
+  {"c": "sport", "id": "q414", "q": "Marathon runners often 'hit the wall' at mile 20. What % of the way through is that?", "a": 76, "f": "It's roughly when the body runs out of stored energy, with six miles still to go."},
+  {"c": "world", "id": "q415", "q": "What % of Earth's land is Antarctica?", "a": 9, "f": "It's bigger than Europe, and the ice on it averages nearly 2 km thick."},
+  {"c": "filmtv", "id": "q416", "q": "What % of the eight Harry Potter films were directed by David Yates?", "a": 50, "f": "He did the last four, from Order of the Phoenix onwards."},
+  {"c": "litart", "id": "q417", "q": "What % of the alphabet does the word 'uncopyrightable' use?", "a": 58, "f": "It's one of the longest English words that never repeats a letter."},
+  {"c": "culture", "id": "q420", "q": "What % of a tarot deck is the Major Arcana?", "a": 28, "f": "The other 56 are four suits, like playing cards with an extra court card each."},
+];
+const NB_DATE = [
+  {"c": "food", "id": "q004", "q": "When did sliced bread first go on sale?", "a": 1928, "f": "Everything since has been measured against it."},
+  {"c": "pop", "id": "q005", "q": "When was the first text message sent?", "a": 1992, "f": "It said 'Merry Christmas'. It came from a computer, because phones couldn't send texts yet, so it never got a reply."},
+  {"c": "tech", "id": "q006", "q": "When did the Queen send her first email?", "a": 1976, "f": "She sent it from an army research base in Malvern, years before most people had heard of email."},
+  {"c": "pop", "id": "q007", "q": "When was 'selfie' named Word of the Year?", "a": 2013, "f": "Oxford Dictionaries' pick. Use of the word had jumped about 17,000% in a year."},
+  {"c": "tech", "id": "q019", "q": "When did Britain's first cash machine open?", "a": 1967, "f": "Barclays in Enfield. The first person to use it was Reg Varney from On the Buses, and it paid out £10 at most."},
+  {"c": "pop", "id": "q021", "q": "When did the Tamagotchi go on sale?", "a": 1996, "f": "Tens of millions were sold in a few years. A worrying number of them died of neglect."},
+  {"c": "pop", "id": "q022", "q": "When did Mr Blobby first appear on TV?", "a": 1992, "f": "He had a Christmas number one the following year."},
+  {"c": "filmtv", "id": "q024", "q": "When did the first episode of Friends air?", "a": 1994, "f": "By the end the six stars were getting $1 million each per episode, because they negotiated as a group."},
+  {"c": "music", "id": "q030", "q": "When did Live Aid happen?", "a": 1985, "f": "Phil Collins played Wembley and Philadelphia on the same day, catching Concorde in between."},
+  {"c": "histsci", "id": "q040", "q": "When did Pluto stop being a planet?", "a": 2006, "f": "Pluto itself didn't notice. It's still doing exactly what it was doing before."},
+  {"c": "litart", "id": "q043", "q": "When was the first Harry Potter book published?", "a": 1997, "f": "Twelve publishers turned it down. Bloomsbury said yes after the chairman's eight-year-old daughter read it."},
+  {"c": "histsci", "id": "q049", "q": "When did the Great Fire of London start?", "a": 1666, "f": "In a bakery on Pudding Lane. Officially only six deaths were recorded. It was a terrible day for bread."},
+  {"c": "food", "id": "q055", "q": "When did the first McDonald's open in the UK?", "a": 1974, "f": "In Woolwich, south-east London."},
+  {"c": "sport", "id": "q059", "q": "When was the first London Marathon?", "a": 1981, "f": "The two leaders crossed the line holding hands and shared first place."},
+  {"c": "pop", "id": "q064", "q": "When did Big Brother first air in the UK?", "a": 2000, "f": "Winner Craig Phillips gave his £70,000 prize to a friend who needed a heart and lung transplant."},
+  {"c": "gk", "id": "q065", "q": "When did Britain's first motorway open?", "a": 1958, "f": "The eight-mile Preston bypass. It had to shut within weeks after frost wrecked the surface."},
+  {"c": "gk", "id": "q068", "q": "When did the 999 emergency number start?", "a": 1937, "f": "It was the world's first emergency number. The first call reported a burglar, who was caught."},
+  {"c": "pop", "id": "q073", "q": "When did Gangnam Style become the first YouTube video to hit a billion views?", "a": 2012, "f": "It later broke YouTube's view counter, which hadn't been built to go that high."},
+  {"c": "tech", "id": "q078", "q": "When did the first iPhone go on sale?", "a": 2007, "f": "It had no app store and couldn't copy and paste."},
+  {"c": "culture", "id": "q081", "q": "When was the Gunpowder Plot?", "a": 1605, "f": "Guy Fawkes was caught guarding 36 barrels of gunpowder under the House of Lords."},
+  {"c": "filmtv", "id": "q089", "q": "When was the first Toy Story released?", "a": 1995, "f": "It was the first feature film made entirely on computers."},
+  {"c": "gk", "id": "q095", "q": "When was the Green Cross Code launched?", "a": 1970, "f": "The Green Cross Man who promoted it was Dave Prowse, who went on to play Darth Vader."},
+  {"c": "gk", "id": "q096", "q": "When were the world's first traffic lights put up, outside Parliament?", "a": 1868, "f": "They were gas-lit, and exploded a few weeks later, injuring the policeman working them."},
+  {"c": "music", "id": "q143", "q": "When was the first Glastonbury Festival?", "a": 1970, "f": "Tickets were £1 and included free milk from the farm."},
+  {"c": "music", "id": "q144", "q": "When did the first CD go on sale?", "a": 1982, "f": "Billy Joel's 52nd Street, in Japan."},
+  {"c": "music", "id": "q145", "q": "When did Top of the Pops end its weekly run?", "a": 2006, "f": "It still turns up every Christmas."},
+  {"c": "music", "id": "q146", "q": "When did Oasis first split up?", "a": 2009, "f": "After a backstage row in Paris. They got back together in 2025."},
+  {"c": "filmtv", "id": "q175", "q": "When was the first episode of Doctor Who shown?", "a": 1963, "f": "It went out the day after JFK was shot, so the BBC showed it again the next week."},
+  {"c": "filmtv", "id": "q176", "q": "When did the first Harry Potter film come out?", "a": 2001, "f": "Alan Rickman was told how Snape's story ended years before the last book came out."},
+  {"c": "filmtv", "id": "q177", "q": "When did EastEnders first air?", "a": 1985, "f": "The very first scene was the discovery of a body."},
+  {"c": "tech", "id": "q203", "q": "When was the first email sent?", "a": 1971, "f": "Ray Tomlinson chose the @ sign. He couldn't remember what the message said, but thought it was probably QWERTYUIOP."},
+  {"c": "tech", "id": "q204", "q": "When did the first web page go live?", "a": 1991, "f": "It's still online. It's a page explaining what the web is."},
+  {"c": "litart", "id": "q238", "q": "When was Shakespeare born?", "a": 1564, "f": "He's thought to have died on his birthday, 23 April."},
+  {"c": "litart", "id": "q239", "q": "When was Pride and Prejudice published?", "a": 1813, "f": "Jane Austen sold the rights for £110."},
+  {"c": "litart", "id": "q240", "q": "When did the first Penguin paperbacks go on sale?", "a": 1935, "f": "Sixpence each, the price of ten cigarettes."},
+  {"c": "culture", "id": "q266", "q": "When was the King James Bible first published?", "a": 1611, "f": "A 1631 printing missed the 'not' out of 'Thou shalt not commit adultery'. It's known as the Wicked Bible."},
+  {"c": "culture", "id": "q267", "q": "When did Britain switch to the modern calendar?", "a": 1752, "f": "Eleven days vanished. People went to bed on 2 September and woke up on the 14th."},
+  {"c": "culture", "id": "q268", "q": "When was the first Burns Night supper held?", "a": 1801, "f": "His friends held it five years after he died."},
+  {"c": "culture", "id": "q269", "q": "When did a picture of Queen Victoria's Christmas tree make every British family want one?", "a": 1848, "f": "Prince Albert brought the German tradition with him."},
+  {"c": "histsci", "id": "q298", "q": "When was Dolly the sheep born?", "a": 1996, "f": "She was cloned from a mammary cell, so they named her after Dolly Parton."},
+  {"c": "food", "id": "q323", "q": "When was the Toblerone first made?", "a": 1908, "f": "Everyone says the shape is the Matterhorn. The inventor's family say it was dancers in a pyramid."},
+  {"c": "food", "id": "q324", "q": "When did Britain's first curry house open?", "a": 1810, "f": "Its owner went bankrupt within two years. Britain wasn't quite ready."},
+  {"c": "food", "id": "q325", "q": "When did flavoured crisps first go on sale?", "a": 1954, "f": "Cheese and onion came first. Before that, you got a little blue twist of salt to add yourself."},
+  {"c": "litart", "id": "q347", "q": "When was the first crossword published?", "a": 1913, "f": "It was diamond-shaped and called a 'word-cross'."},
+  {"c": "histsci", "id": "q350", "q": "When was teaching first recorded at Oxford University?", "a": 1096, "f": "Oxford is older than the Aztec Empire."},
+  {"c": "histsci", "id": "q351", "q": "When was the last execution at the Tower of London?", "a": 1941, "f": "A German spy, shot by firing squad."},
+  {"c": "sport", "id": "q357", "q": "When was the first Wimbledon?", "a": 1877, "f": "A croquet club held it to pay for a new pony roller."},
+  {"c": "sport", "id": "q358", "q": "When was the first Oxford v Cambridge Boat Race?", "a": 1829, "f": "It's been rowed almost every year since, apart from the wars."},
+  {"c": "sport", "id": "q359", "q": "When did England win the Rugby World Cup?", "a": 2003, "f": "Jonny Wilkinson's winning drop goal came in the last minute of extra time, off his weaker right foot."},
+  {"c": "sport", "id": "q360", "q": "When did Leicester City win the Premier League?", "a": 2016, "f": "Bookmakers had them at 5,000 to 1."},
+  {"c": "world", "id": "q385", "q": "When did Britain hand Hong Kong back to China?", "a": 1997, "f": "Most of it had been on a 99-year lease."},
+  {"c": "world", "id": "q386", "q": "When did the Channel Tunnel open?", "a": 1994, "f": "The British and French diggers met in the middle and were only 36 cm out."},
+  {"c": "world", "id": "q387", "q": "When did the Scottish Parliament first sit again?", "a": 1999, "f": "The first time since 1707."},
+  {"c": "world", "id": "q388", "q": "When did euro notes and coins come into use?", "a": 2002, "f": "The notes show made-up bridges and windows, so no country could claim them."},
+  {"c": "world", "id": "q389", "q": "When did Sweden switch from driving on the left to the right?", "a": 1967, "f": "The whole country swapped sides at 5am on a Sunday."},
+  {"c": "gk", "id": "q418", "q": "When was the first speeding ticket issued in Britain?", "a": 1896, "f": "Walter Arnold was doing 8 mph in a 2 mph zone. A policeman on a bicycle caught him."},
+];
+const NB_PIN = [
+  {"c": "sport", "id": "q008", "q": "Where does Usain Bolt's top speed fall between these two?", "item": "Usain Bolt's top speed", "lo": ["20 mph zone", 20], "hi": ["30 mph zone", 30], "a": 27.8, "u": "mph", "f": "The fastest man ever recorded would get a speeding ticket in a 20 zone."},
+  {"c": "litart", "id": "q009", "q": "Where does the Angel of the North's wingspan fall between these two?", "item": "Angel of the North's wingspan", "lo": ["Double-decker bus", 11], "hi": ["Jumbo jet", 64], "a": 54, "u": "m", "f": "It's 20 m tall but 54 m across, and the wings tilt slightly forward so it looks like it's going in for a hug."},
+  {"c": "gk", "id": "q016", "q": "Where does the weight of a £1 coin fall between these two?", "item": "A £1 coin", "lo": ["A 1p coin", 3.56], "hi": ["A £2 coin", 12], "a": 8.75, "u": "g", "f": "It went 12-sided in 2017, after about one in thirty of the old round pounds turned out to be fake."},
+  {"c": "filmtv", "id": "q026", "q": "Where does the time the real Titanic took to sink fall between these two?", "item": "The real Titanic sinking", "lo": ["A football match", 90], "hi": ["The film Titanic", 194], "a": 160, "u": "min", "f": "The ship went down in about 2 hours 40 minutes. The film takes over three hours. "},
+  {"c": "music", "id": "q031", "q": "Where does the length of Bohemian Rhapsody fall between these two?", "item": "Bohemian Rhapsody", "lo": ["Typical pop single", 210], "hi": ["Stairway to Heaven", 482], "a": 355, "u": "time", "f": "The label said radio would never play a six-minute single. Kenny Everett played it 14 times in two days."},
+  {"c": "world", "id": "q039", "q": "Where does Loch Ness's depth fall between these two?", "item": "Loch Ness's depth", "lo": ["Big Ben's tower", 96], "hi": ["The Shard", 310], "a": 230, "u": "m", "f": "It holds more fresh water and sea monsters than all the lakes in England and Wales put together. "},
+  {"c": "litart", "id": "q045", "q": "Where does the Mona Lisa's width fall between these two?", "item": "The Mona Lisa's width", "lo": ["A sheet of A4", 21], "hi": ["A single bed", 90], "a": 53, "u": "cm", "f": "Smaller than most people expect, and usually seen over a sea of phones."},
+  {"c": "histsci", "id": "q052", "q": "Where does the temperature of the Sun's surface fall between these two?", "item": "The Sun's surface", "lo": ["Pizza oven", 450], "hi": ["Lightning bolt", 30000], "a": 5500, "u": "°C", "f": "Lightning is around five times hotter than the surface of the Sun."},
+  {"c": "food", "id": "q056", "q": "Where does the alcohol strength of a pint of Guinness fall between these two?", "item": "A pint of Guinness", "lo": ["Alcohol-free beer", 0.5], "hi": ["Glass of wine", 12], "a": 4.2, "u": "%", "f": "The St James's Gate Brewery has been using its own strain of yeast for over 100 years."},
+  {"c": "sport", "id": "q061", "q": "Where does the length of a cricket pitch fall between these two?", "item": "A cricket pitch", "lo": ["Snooker table", 3.6], "hi": ["Tennis court", 23.8], "a": 20.1, "u": "m", "f": "It's 22 yards, or one 'chain', an old surveyor's unit nobody else uses any more."},
+  {"c": "music", "id": "q076", "q": "Where does Paul McCartney's age when he wrote the tune for 'When I'm Sixty-Four' fall between these two?", "item": "McCartney writing 'When I'm Sixty-Four'", "lo": ["Age 10", 10], "hi": ["Age 64", 64], "a": 16, "u": "", "f": "He finally turned 64 in 2006."},
+  {"c": "culture", "id": "q082", "q": "Where does Methuselah's age fall between these two?", "item": "Methuselah's age", "lo": ["Oldest verified human", 122], "hi": ["1,000 years", 1000], "a": 969, "u": "", "f": "The oldest person in the Bible. Jeanne Calment, the real record holder, made it to 122."},
+  {"c": "world", "id": "q088", "q": "Where does the population of Wales fall between these two?", "item": "Population of Wales", "lo": ["Northern Ireland", 1.9], "hi": ["Scotland", 5.4], "a": 3.1, "u": "million", "f": "There are about three sheep for every person in Wales."},
+  {"c": "gk", "id": "q097", "q": "Where does the number of tiles in a Scrabble set fall between these two?", "item": "Tiles in a Scrabble set", "lo": ["Deck of cards", 52], "hi": ["Squares on the board", 225], "a": 100, "u": "", "f": "Only one Z and one Q. Two of the hundred are blanks."},
+  {"c": "gk", "id": "q098", "q": "Where do the steps up Big Ben's tower fall between these two?", "item": "Steps up Big Ben's tower", "lo": ["The Monument", 311], "hi": ["Eiffel Tower 2nd floor", 674], "a": 334, "u": "", "f": "At the top you're standing next to Big Ben itself, all 13.7 tonnes of it."},
+  {"c": "gk", "id": "q099", "q": "Where does a London black cab's turning circle fall between these two?", "item": "A black cab's turning circle", "lo": ["Parking space", 16], "hi": ["Double-decker bus", 36], "a": 25, "u": "ft", "f": "The rule dates back to the Savoy Hotel's tiny forecourt, where cabs had to swing round."},
+  {"c": "gk", "id": "q100", "q": "Where does the number of Commonwealth countries fall between these two?", "item": "Commonwealth countries", "lo": ["The EU", 27], "hi": ["The UN", 193], "a": 56, "u": "", "f": "Several members, like Mozambique and Rwanda, were never British colonies."},
+  {"c": "pop", "id": "q119", "q": "Where does the number of original Pokémon fall between these two?", "item": "Original Pokémon", "lo": ["Deck of cards", 52], "hi": ["Bones in the body", 206], "a": 151, "u": "", "f": "Mew was slipped into the game at the last minute, making it 151."},
+  {"c": "pop", "id": "q121", "q": "Where do the Spice Girls' UK number ones fall between these two?", "item": "Spice Girls UK number ones", "lo": ["Oasis", 8], "hi": ["The Beatles", 17], "a": 9, "u": "", "f": "Their first six singles all went straight to number one."},
+  {"c": "pop", "id": "q122", "q": "Where does Twitter's original character limit fall between these two?", "item": "Twitter's original limit", "lo": ["Car number plate", 7], "hi": ["Text message", 160], "a": 140, "u": "characters", "f": "It left room for a username inside a single 160-character text."},
+  {"c": "pop", "id": "q123", "q": "Where does Monopoly's starting money fall between these two?", "item": "Monopoly starting money", "lo": ["Passing Go", 200], "hi": ["Mayfair with a hotel", 2000], "a": 1500, "u": "£", "f": "One unlucky landing on Mayfair costs more than you started with."},
+  {"c": "music", "id": "q147", "q": "Where does the length of 'American Pie' fall between these two?", "item": "American Pie", "lo": ["Hey Jude", 431], "hi": ["All Too Well (10 min)", 613], "a": 522, "u": "time", "f": "It was so long the single was split across both sides of the record."},
+  {"c": "music", "id": "q148", "q": "Where does the number of strings on a concert harp fall between these two?", "item": "Strings on a concert harp", "lo": ["Guitar", 6], "hi": ["Piano", 230], "a": 47, "u": "", "f": "The red strings are all Cs, so the harpist doesn't get lost."},
+  {"c": "music", "id": "q149", "q": "Where does the Live Aid crowd at Wembley fall between these two?", "item": "Live Aid crowd at Wembley", "lo": ["Royal Albert Hall", 5272], "hi": ["Glastonbury", 210000], "a": 72000, "u": "", "f": "Queen's 20-minute set is often called the greatest live performance ever."},
+  {"c": "filmtv", "id": "q178", "q": "Where does Darth Vader's actor David Prowse's height fall between these two?", "item": "David Prowse (Darth Vader)", "lo": ["Average UK man", 175], "hi": ["Peter Mayhew (Chewbacca)", 221], "a": 198, "u": "cm", "f": "James Earl Jones did the voice. Prowse had a Bristol accent."},
+  {"c": "filmtv", "id": "q179", "q": "Where does the number of official James Bond films fall between these two?", "item": "Official James Bond films", "lo": ["Harry Potter films", 8], "hi": ["Carry On films", 31], "a": 25, "u": "", "f": "Sean Connery also made an unofficial one, Never Say Never Again."},
+  {"c": "tech", "id": "q205", "q": "Where does the weight of the first mobile phone fall between these two?", "item": "The first mobile phone", "lo": ["An iPhone", 170], "hi": ["A house brick", 2300], "a": 790, "u": "g", "f": "Nicknamed 'the brick'. Ten hours to charge, 30 minutes of talk."},
+  {"c": "tech", "id": "q206", "q": "Where does the maximum number of bitcoin that can ever exist fall between these two?", "item": "Most bitcoin that can exist", "lo": ["Population of London", 9], "hi": ["Population of Australia", 27], "a": 21, "u": "million", "f": "Several million are thought lost for good, on forgotten hard drives."},
+  {"c": "tech", "id": "q207", "q": "Where does the speed the Earth spins at the equator fall between these two?", "item": "Earth's spin at the equator", "lo": ["Jumbo jet", 900], "hi": ["Concorde", 2180], "a": 1670, "u": "km/h", "f": "Concorde could outrun the sunset. Flying west, you landed before you'd taken off, by local time."},
+  {"c": "tech", "id": "q208", "q": "Where does the Channel Tunnel's length fall between these two?", "item": "The Channel Tunnel", "lo": ["Severn Tunnel", 7], "hi": ["Seikan Tunnel", 54], "a": 50, "u": "km", "f": "Its 38 km under the sea is the longest undersea stretch of any tunnel."},
+  {"c": "tech", "id": "q209", "q": "Where do the Ford Model T's sales fall between these two?", "item": "Ford Model T sales", "lo": ["Original Mini", 5.3], "hi": ["VW Beetle", 21.5], "a": 15, "u": "million", "f": "Any colour you like, as long as it's black."},
+  {"c": "pop", "id": "q228", "q": "Where does the TV audience for Only Fools and Horses at Christmas 1996 fall between these two?", "item": "Only Fools and Horses, Christmas 1996", "lo": ["Gavin & Stacey, 2019", 17.9], "hi": ["EastEnders, Christmas 1986", 30.2], "a": 24.3, "u": "million", "f": "Still the most-watched sitcom episode ever in the UK."},
+  {"c": "filmtv", "id": "q229", "q": "Where does Frodo's age when he leaves the Shire fall between these two?", "item": "Frodo leaving the Shire", "lo": ["Harry starting Hogwarts", 11], "hi": ["Bilbo's farewell party", 111], "a": 50, "u": "", "f": "Hobbits don't come of age until 33."},
+  {"c": "filmtv", "id": "q230", "q": "Where does Gollum's age fall between these two?", "item": "Gollum's age", "lo": ["Bilbo at his party", 111], "hi": ["Methuselah", 969], "a": 589, "u": "", "f": "The Ring kept him going. He had it for around 500 years."},
+  {"c": "litart", "id": "q242", "q": "Where does the word count of War and Peace fall between these two?", "item": "War and Peace", "lo": ["Order of the Phoenix", 257000], "hi": ["All of Harry Potter", 1084000], "a": 587000, "u": "words", "f": "Tolstoy's wife copied the whole thing out by hand several times."},
+  {"c": "litart", "id": "q243", "q": "Where does Shakespeare's age at death fall between these two?", "item": "Shakespeare's age at death", "lo": ["Mozart", 35], "hi": ["Charles Dickens", 58], "a": 52, "u": "", "f": "He left his wife his 'second-best bed'."},
+  {"c": "litart", "id": "q244", "q": "Where does the number of Discworld novels fall between these two?", "item": "Discworld novels", "lo": ["Harry Potter books", 7], "hi": ["Agatha Christie novels", 66], "a": 41, "u": "", "f": "Terry Pratchett asked for his unfinished work to be crushed by a steamroller. It was."},
+  {"c": "culture", "id": "q271", "q": "Where does the weight of the Stone of Destiny fall between these two?", "item": "The Stone of Destiny", "lo": ["Average adult", 75], "hi": ["Stonehenge bluestone", 2000], "a": 152, "u": "kg", "f": "Four students stole it from Westminster Abbey on Christmas Day 1950."},
+  {"c": "culture", "id": "q272", "q": "Where do Judas's pieces of silver fall between these two?", "item": "Judas's pieces of silver", "lo": ["The Twelve Apostles", 12], "hi": ["Ali Baba's thieves", 40], "a": 30, "u": "", "f": "In the Old Testament, 30 pieces of silver was the price of a slave."},
+  {"c": "culture", "id": "q273", "q": "Where do Odysseus's years away from home fall between these two?", "item": "Odysseus away from home", "lo": ["The Trojan War", 10], "hi": ["Sleeping Beauty's sleep", 100], "a": 20, "u": "years", "f": "Ten years of war, ten more getting home. His dog still recognised him."},
+  {"c": "histsci", "id": "q299", "q": "Where does the distance to the Moon fall between these two?", "item": "Distance to the Moon", "lo": ["London to Sydney", 17000], "hi": ["Distance to the Sun", 150000000], "a": 384000, "u": "km", "f": "All the other planets would fit in the gap between Earth and the Moon."},
+  {"c": "histsci", "id": "q300", "q": "Where does the speed of sound fall between these two?", "item": "Speed of sound", "lo": ["Cheetah", 110], "hi": ["Concorde", 2180], "a": 1235, "u": "km/h", "f": "A cracking whip is a tiny sonic boom. The tip breaks the sound barrier."},
+  {"c": "histsci", "id": "q301", "q": "Where does Tutankhamun's age at death fall between these two?", "item": "Tutankhamun's age at death", "lo": ["When he became pharaoh", 9], "hi": ["Cleopatra at death", 39], "a": 19, "u": "", "f": "He's famous mainly because his was the tomb the robbers missed."},
+  {"c": "histsci", "id": "q302", "q": "Where does the number of elements in the periodic table fall between these two?", "item": "Elements in the periodic table", "lo": ["Gold's atomic number", 79], "hi": ["Bones in an adult", 206], "a": 118, "u": "", "f": "One of the newest, oganesson, is named after a scientist who was still alive."},
+  {"c": "food", "id": "q326", "q": "Where does the caffeine in a can of Red Bull fall between these two?", "item": "A can of Red Bull", "lo": ["A can of Coke", 32], "hi": ["Large filter coffee", 310], "a": 80, "u": "mg", "f": "A big filter coffee has almost four times as much."},
+  {"c": "food", "id": "q327", "q": "Where does the world's heaviest pumpkin fall between these two?", "item": "The heaviest pumpkin", "lo": ["Grand piano", 480], "hi": ["Family car", 1400], "a": 1247, "u": "kg", "f": "Grown in Minnesota in 2023, and named Michael Jordan."},
+  {"c": "food", "id": "q328", "q": "Where does the strength of Buckfast fall between these two?", "item": "Buckfast", "lo": ["Pint of Guinness", 4.2], "hi": ["Whisky", 40], "a": 15, "u": "%", "f": "Made by Benedictine monks in Devon. Famously more popular in Scotland."},
+  {"c": "food", "id": "q329", "q": "Where does a British pint fall between these two?", "item": "A British pint", "lo": ["A can", 330], "hi": ["Bottle of wine", 750], "a": 568, "u": "ml", "f": "An American pint is smaller, at 473 ml. Choose your bar carefully."},
+  {"c": "culture", "id": "q346", "q": "Where does the number of rooms in Buckingham Palace fall between these two?", "item": "Rooms in Buckingham Palace", "lo": ["10 Downing Street", 100], "hi": ["Versailles", 2300], "a": 775, "u": "", "f": "Including 78 bathrooms."},
+  {"c": "sport", "id": "q361", "q": "Where does the length of a marathon fall between these two?", "item": "A marathon", "lo": ["Channel at Dover", 33], "hi": ["Channel Tunnel", 50], "a": 42.2, "u": "km", "f": "The odd 195 metres were added in 1908 so the race finished in front of the royal box."},
+  {"c": "sport", "id": "q362", "q": "Where does the fastest tennis serve ever recorded fall between these two?", "item": "Fastest tennis serve", "lo": ["Cheetah", 110], "hi": ["F1 top speed", 370], "a": 263, "u": "km/h", "f": "Sam Groth hit it in 2012, but it doesn't officially count because of where he hit it."},
+  {"c": "sport", "id": "q363", "q": "Where does the height of a basketball hoop fall between these two?", "item": "A basketball hoop", "lo": ["Football crossbar", 2.44], "hi": ["Double-decker bus", 4.4], "a": 3.05, "u": "m", "f": "Exactly ten feet, because that's how high the balcony was where the inventor nailed up a peach basket."},
+  {"c": "world", "id": "q390", "q": "Where does the number of Scottish islands fall between these two?", "item": "Scottish islands", "lo": ["Isles of Scilly", 140], "hi": ["Indonesia", 17000], "a": 790, "u": "", "f": "Only around 100 of them have anyone living on them."},
+  {"c": "world", "id": "q391", "q": "Where does the population of Vatican City fall between these two?", "item": "Population of Vatican City", "lo": ["Premier League squad", 25], "hi": ["Big secondary school", 1000], "a": 800, "u": "", "f": "The smallest country in the world, and it still has a football team."},
+  {"c": "world", "id": "q392", "q": "Where does the population of Greenland fall between these two?", "item": "Population of Greenland", "lo": ["Full Hampden Park", 51866], "hi": ["Full Anfield", 61276], "a": 56000, "u": "", "f": "The world's biggest island, home to fewer people than a big football crowd."},
+];
+const NB_STRATA = [
+  {"c": "pop", "id": "q010", "prompt": "First on air first", "items": ["Blue Peter", "Coronation Street", "Doctor Who", "EastEnders", "Bake Off"], "f": "Blue Peter is the longest-running kids' TV show in the world."},
+  {"c": "gk", "id": "q017", "prompt": "Most sides first", "items": ["£1 coin", "Stop sign", "50p coin", "Honeycomb cell", "The Pentagon"], "f": "The 50p's edges are curved so it's the same width all the way round, which is why it still rolls through coin slots."},
+  {"c": "pop", "id": "q023", "prompt": "Craze earliest first", "items": ["Tamagotchi", "Furby", "Nintendo Wii", "iPad", "Fidget spinner"], "f": "The NSA banned Furbies from its offices in 1999 in case they recorded secrets. They couldn't record anything."},
+  {"c": "music", "id": "q032", "prompt": "Formed earliest first", "items": ["The Rolling Stones", "Queen", "ABBA", "Oasis", "Arctic Monkeys"], "f": "The Rolling Stones have been going longer than most of their fans have been alive."},
+  {"c": "tech", "id": "q042", "prompt": "Founded earliest first", "items": ["Nokia", "Nintendo", "Ford", "Apple", "Google"], "f": "Nintendo started out in 1889 making playing cards."},
+  {"c": "histsci", "id": "q050", "prompt": "Lived earliest first", "items": ["Tutankhamun", "Julius Caesar", "Cleopatra", "William the Conqueror", "Henry VIII"], "f": "Cleopatra lived closer in time to the Moon landing than to the building of the Great Pyramid."},
+  {"c": "food", "id": "q057", "prompt": "Came along earliest first", "items": ["The sandwich", "The fish and chip shop", "Sliced bread", "Fish fingers", "Pot Noodle"], "f": "The Earl of Sandwich supposedly wanted something he could eat without leaving the card table."},
+  {"c": "gk", "id": "q069", "prompt": "Built earliest first", "items": ["Westminster Abbey", "St Paul's Cathedral", "Big Ben", "Tower Bridge", "London Eye"], "f": "Westminster Abbey has hosted every coronation since 1066."},
+  {"c": "pop", "id": "q074", "prompt": "Released earliest first", "items": ["Rubik's Cube", "Game Boy", "PlayStation", "Pokémon Red & Green", "Angry Birds"], "f": "It took Ernő Rubik about a month to solve his own cube."},
+  {"c": "culture", "id": "q083", "prompt": "Wedding anniversaries, earliest first", "items": ["Paper", "Tin", "Silver", "Ruby", "Gold"], "f": "Paper comes first. Diamond is 60."},
+  {"c": "world", "id": "q086", "prompt": "Furthest north first", "items": ["Reykjavík", "Oslo", "Edinburgh", "Moscow", "London"], "f": "Edinburgh is further north than Moscow."},
+  {"c": "filmtv", "id": "q090", "prompt": "Set earliest first", "items": ["Gladiator", "Braveheart", "Shakespeare in Love", "Titanic", "Saving Private Ryan"], "f": "William Wallace never wore a kilt. They didn't turn up for a few more centuries."},
+  {"c": "gk", "id": "q101", "prompt": "Longest river first", "items": ["Severn", "Thames", "Trent", "Wye", "Tyne"], "f": "The Severn beats the Thames by only about eight kilometres."},
+  {"c": "gk", "id": "q102", "prompt": "Biggest coin first", "items": ["£2", "50p", "2p", "10p", "1p"], "f": "The 2p is bigger than the 10p, which still catches people out at the till."},
+  {"c": "gk", "id": "q103", "prompt": "Highest Scrabble score first", "items": ["Q", "X", "K", "W", "E"], "f": "Q shares the top score of 10 with Z."},
+  {"c": "pop", "id": "q138", "prompt": "First broadcast first", "items": ["Top of the Pops", "Countdown", "Who Wants to Be a Millionaire?", "Strictly Come Dancing", "The Traitors"], "f": "Countdown was the first programme ever shown on Channel 4."},
+  {"c": "music", "id": "q150", "prompt": "Most UK number ones first", "items": ["Elvis Presley", "The Beatles", "Cliff Richard", "Madonna", "Oasis"], "f": "Elvis got a few of his only when they were re-released in 2005."},
+  {"c": "music", "id": "q152", "prompt": "Fewest strings first", "items": ["Ukulele", "Banjo", "Guitar", "12-string guitar", "Harp"], "f": "A banjo's fifth string is shorter than the rest and starts halfway up the neck."},
+  {"c": "music", "id": "q153", "prompt": "Won Eurovision earliest first", "items": ["ABBA", "Brotherhood of Man", "Bucks Fizz", "Katrina and the Waves", "Måneskin"], "f": "Bucks Fizz won by ripping off their skirts mid-song."},
+  {"c": "filmtv", "id": "q183", "prompt": "Most Oscars first", "items": ["Titanic", "Slumdog Millionaire", "Shakespeare in Love", "Forrest Gump", "The Godfather"], "f": "Titanic shares the record of 11 with Ben-Hur and The Return of the King."},
+  {"c": "filmtv", "id": "q184", "prompt": "Played the Doctor earliest first", "items": ["William Hartnell", "Tom Baker", "Christopher Eccleston", "David Tennant", "Jodie Whittaker"], "f": "Tom Baker played the Doctor for seven years, longer than anyone."},
+  {"c": "filmtv", "id": "q185", "prompt": "First on air first", "items": ["Panorama", "Coronation Street", "Match of the Day", "Grange Hill", "EastEnders"], "f": "Panorama is the world's longest-running current affairs programme."},
+  {"c": "tech", "id": "q210", "prompt": "Invented earliest first", "items": ["Telephone", "Light bulb", "Television", "Microwave oven", "Mobile phone"], "f": "The first mobile call was made to a rival company, to gloat."},
+  {"c": "tech", "id": "q211", "prompt": "Released earliest first", "items": ["Sony Walkman", "Game Boy", "DVD player", "iPod", "iPhone"], "f": "Sony's co-founder wanted something to listen to opera on during long flights."},
+  {"c": "tech", "id": "q212", "prompt": "Founded earliest first", "items": ["Twinings", "Guinness", "Cadbury", "Marks & Spencer", "Tesco"], "f": "Twinings is still in the same shop on the Strand where it started in 1706."},
+  {"c": "tech", "id": "q213", "prompt": "Arrived in the UK earliest first", "items": ["Credit card", "Cash machine", "Chip and PIN", "Contactless", "Apple Pay"], "f": "Barclaycard was the first. Barclays opened the first cash machine a year later."},
+  {"c": "filmtv", "id": "q231", "prompt": "Released earliest first", "items": ["Snow White", "The Lion King", "Toy Story", "Frozen", "Encanto"], "f": "People called Snow White 'Disney's Folly', sure it would bankrupt him."},
+  {"c": "litart", "id": "q245", "prompt": "Published earliest first", "items": ["Robinson Crusoe", "Pride and Prejudice", "Frankenstein", "Oliver Twist", "Nineteen Eighty-Four"], "f": "Mary Shelley started Frankenstein at 18, for a ghost story contest."},
+  {"c": "litart", "id": "q246", "prompt": "Painted earliest first", "items": ["Mona Lisa", "The Night Watch", "The Hay Wain", "The Starry Night", "The Scream"], "f": "The Hay Wain won a gold medal in Paris before the English paid it much notice."},
+  {"c": "litart", "id": "q247", "prompt": "Born earliest first", "items": ["Geoffrey Chaucer", "William Shakespeare", "Jane Austen", "Charles Dickens", "J.K. Rowling"], "f": "Chaucer is called the father of English literature, and he wrote some very rude jokes."},
+  {"c": "litart", "id": "q248", "prompt": "Longest first", "items": ["War and Peace", "Moby-Dick", "Pride and Prejudice", "The Great Gatsby", "Of Mice and Men"], "f": "Steinbeck's dog ate the first draft of Of Mice and Men."},
+  {"c": "litart", "id": "q249", "prompt": "Tallest statue first", "items": ["Statue of Liberty", "Christ the Redeemer", "Angel of the North", "Michelangelo's David", "The Little Mermaid"], "f": "Copenhagen's Little Mermaid is mostly famous for being smaller than people expect."},
+  {"c": "culture", "id": "q274", "prompt": "Earliest in the year first", "items": ["Burns Night", "St David's Day", "St Patrick's Day", "St George's Day", "St Andrew's Day"], "f": "Burns Night is the only one celebrating a poet rather than a saint."},
+  {"c": "culture", "id": "q275", "prompt": "Built earliest first", "items": ["Stonehenge", "Great Pyramid", "Parthenon", "Colosseum", "Machu Picchu"], "f": "Stonehenge's earliest stage is older than the pyramids."},
+  {"c": "culture", "id": "q276", "prompt": "Highest rank first", "items": ["Duke", "Marquess", "Earl", "Viscount", "Baron"], "f": "There's no female earl. An earl's wife is a countess."},
+  {"c": "culture", "id": "q277", "prompt": "Lasts longest first", "items": ["Lent", "Ramadan", "The Twelve Days of Christmas", "Hanukkah", "Diwali"], "f": "Lent's 40 days don't count Sundays, so it really runs about six and a half weeks."},
+  {"c": "histsci", "id": "q303", "prompt": "Furthest from the Sun first", "items": ["Neptune", "Uranus", "Saturn", "Jupiter", "Mars"], "f": "A year on Neptune lasts 165 Earth years."},
+  {"c": "histsci", "id": "q304", "prompt": "Happened earliest first", "items": ["Black Death", "Great Fire of London", "Battle of Waterloo", "Titanic sinks", "Moon landing"], "f": "Waterloo was so close that Wellington called it a near-run thing."},
+  {"c": "histsci", "id": "q305", "prompt": "Biggest first", "items": ["The Sun", "Jupiter", "Earth", "The Moon", "Pluto"], "f": "About 1.3 million Earths would fit inside the Sun."},
+  {"c": "histsci", "id": "q306", "prompt": "Reigned longest first", "items": ["Elizabeth II", "Victoria", "George III", "Henry III", "Elizabeth I"], "f": "Lady Jane Grey managed nine days."},
+  {"c": "food", "id": "q330", "prompt": "Hottest first", "items": ["Carolina Reaper", "Scotch bonnet", "Cayenne", "Jalapeño", "Bell pepper"], "f": "Birds can't taste chilli heat at all, which helps spread the seeds."},
+  {"c": "food", "id": "q331", "prompt": "Came along earliest first", "items": ["Worcestershire sauce", "Marmite", "Bisto", "Branston Pickle", "Pot Noodle"], "f": "Marmite is made from the yeast left over from brewing beer."},
+  {"c": "food", "id": "q332", "prompt": "Strongest first", "items": ["Absinthe", "Whisky", "Port", "Wine", "Cider"], "f": "Port was strengthened with brandy so it survived the voyage from Portugal."},
+  {"c": "food", "id": "q333", "prompt": "Most calories per 100 g first", "items": ["Butter", "Peanuts", "Milk chocolate", "Cheddar", "Bread"], "f": "Peanuts beat chocolate. Nobody tells you that."},
+  {"c": "sport", "id": "q364", "prompt": "Longest race first", "items": ["Marathon", "Half marathon", "10,000 m", "5,000 m", "The mile"], "f": "Roger Bannister ran the first sub-four-minute mile while training to be a doctor."},
+  {"c": "sport", "id": "q365", "prompt": "Most players per side first", "items": ["Rugby union", "Rugby league", "Football", "Netball", "Basketball"], "f": "Netball started out as a version of basketball for women."},
+  {"c": "sport", "id": "q366", "prompt": "Heaviest first", "items": ["Shot put", "Basketball", "Football", "Cricket ball", "Golf ball"], "f": "A cricket ball weighs nearly three times as much as a tennis ball."},
+  {"c": "sport", "id": "q367", "prompt": "First held earliest first", "items": ["The Open", "FA Cup", "Wimbledon", "Tour de France", "Premier League"], "f": "The Open's first prize was a belt, not the Claret Jug."},
+  {"c": "sport", "id": "q368", "prompt": "Most Olympic golds first", "items": ["Jason Kenny", "Chris Hoy", "Steve Redgrave", "Mo Farah", "Tom Daley"], "f": "His wife Laura has five more. That's a lot of gold in one house."},
+  {"c": "world", "id": "q394", "prompt": "Furthest east first", "items": ["Auckland", "Sydney", "Tokyo", "Beijing", "Delhi"], "f": "Sydney is further east than Tokyo."},
+  {"c": "world", "id": "q411", "prompt": "Furthest south first", "items": ["Ushuaia", "Wellington", "Buenos Aires", "Cape Town", "Rio de Janeiro"], "f": "Buenos Aires is further south than Cape Town."},
+  {"c": "world", "id": "q412", "prompt": "Biggest island first", "items": ["Greenland", "New Guinea", "Borneo", "Madagascar", "Great Britain"], "f": "Great Britain is only the ninth-biggest island in the world."},
+  {"c": "pop", "id": "q413", "prompt": "Most expensive Monopoly property first", "items": ["Mayfair", "Park Lane", "Bond Street", "Trafalgar Square", "Old Kent Road"], "f": "Old Kent Road is the only property on the board south of the Thames."},
+  {"c": "music", "id": "q419", "prompt": "Number one earliest first", "items": ["She Loves You", "Bohemian Rhapsody", "Wannabe", "Happy", "Shape of You"], "f": "She Loves You was Britain's best-selling single until 1977."},
+];
+const NB_INTRUSIVE = [
+  {"c": "food", "id": "q011", "prompt": "Named after a real person", "items": ["Peach Melba", "Pavlova", "Earl Grey", "Margherita pizza", "Bakewell tart"], "odd": "Bakewell tart", "f": "Bakewell is a town in Derbyshire, not a person. Shame, it's a great surname."},
+  {"c": "gk", "id": "q018", "prompt": "Owned by the Crown", "items": ["Unmarked mute swans", "Sturgeon", "Whales", "Dolphins", "Trafalgar Square pigeons"], "odd": "Trafalgar Square pigeons", "f": "Sturgeon, whales and dolphins washed up on the coast are 'royal fish'. Nobody has ever claimed the pigeons."},
+  {"c": "filmtv", "id": "q027", "prompt": "Played James Bond", "items": ["Sean Connery", "Roger Moore", "Timothy Dalton", "Pierce Brosnan", "Christopher Lee"], "odd": "Christopher Lee", "f": "Lee played the villain Scaramanga instead. He was also Ian Fleming's step-cousin."},
+  {"c": "music", "id": "q033", "prompt": "Named after a song", "items": ["Radiohead", "The Rolling Stones", "Deep Purple", "Judas Priest", "Pink Floyd"], "odd": "Pink Floyd", "f": "Pink Floyd took their name from two bluesmen, Pink Anderson and Floyd Council."},
+  {"c": "culture", "id": "q037", "prompt": "Gods of the sea", "items": ["Poseidon", "Neptune", "Njord", "Manannán mac Lir", "Hermes"], "odd": "Hermes", "f": "Hermes was the messenger of the gods. Winged sandals, no trident."},
+  {"c": "litart", "id": "q046", "prompt": "Written by Charles Dickens", "items": ["Hard Times", "Little Dorrit", "Bleak House", "The Pickwick Papers", "Vanity Fair"], "odd": "Vanity Fair", "f": "Vanity Fair is Thackeray's. He and Dickens were rivals who didn't speak for years."},
+  {"c": "histsci", "id": "q051", "prompt": "Discovered by accident", "items": ["Penicillin", "X-rays", "The microwave oven", "Post-it notes", "Pluto"], "odd": "Pluto", "f": "Clyde Tombaugh found Pluto in 1930 on purpose, after months of comparing photos of the night sky."},
+  {"c": "sport", "id": "q062", "prompt": "Olympic sports at Paris 2024", "items": ["Breaking", "Skateboarding", "Surfing", "Sport climbing", "Cricket"], "odd": "Cricket", "f": "Cricket returns at LA 2028. Its only Olympic match so far was in 1900: Britain v France."},
+  {"c": "world", "id": "q066", "prompt": "Drive on the left", "items": ["Japan", "Thailand", "Kenya", "Cyprus", "Egypt"], "odd": "Egypt", "f": "About a third of the world drives on the left, mostly places once tied to Britain. Japan and Thailand never were."},
+  {"c": "gk", "id": "q070", "prompt": "Cluedo weapons", "items": ["Candlestick", "Lead pipe", "Rope", "Spanner", "Poison"], "odd": "Poison", "f": "The first design had poison, an axe and a bomb. All three were dropped before it went on sale."},
+  {"c": "tech", "id": "q080", "prompt": "Invented in Britain", "items": ["Television", "Jet engine", "Hovercraft", "Cat's eyes", "The zip"], "odd": "The zip", "f": "The zip is American. It was sold as the 'hookless fastener' until someone came up with a better name."},
+  {"c": "gk", "id": "q104", "prompt": "Featured on a Bank of England note", "items": ["Jane Austen", "Alan Turing", "JMW Turner", "Charles Darwin", "Princess Diana"], "odd": "Princess Diana", "f": "The famous princess Diana banknote is the Di-Faced Tenner, a satirical counterfeit created by Banksy."},
+  {"c": "gk", "id": "q106", "prompt": "NATO phonetic alphabet", "items": ["Alpha", "Bravo", "Tango", "Whiskey", "Zebra"], "odd": "Zebra", "f": "Z is Zulu. The RAF did use 'Zebra' in its older alphabet, until 1956."},
+  {"c": "pop", "id": "q124", "prompt": "Spice Girls", "items": ["Scary", "Sporty", "Baby", "Posh", "Sassy"], "odd": "Sassy", "f": "The fifth was Ginger. The nicknames came from a magazine, not the band."},
+  {"c": "pop", "id": "q125", "prompt": "Wallace & Gromit films", "items": ["The Wrong Trousers", "A Close Shave", "A Grand Day Out", "Curse of the Were-Rabbit", "Chicken Run"], "odd": "Chicken Run", "f": "Same studio, Aardman, but no Wallace and no Gromit."},
+  {"c": "pop", "id": "q126", "prompt": "Real Pokémon", "items": ["Pikachu", "Jigglypuff", "Snorlax", "Bulbasaur", "Flamander"], "odd": "Flamander", "f": "Flamander doesn't exist. The fire starter is Charmander."},
+  {"c": "pop", "id": "q127", "prompt": "Reached UK number one", "items": ["Mr Blobby", "Bohemian Rhapsody", "Killing in the Name", "Do They Know It's Christmas?", "Fairytale of New York"], "odd": "Fairytale of New York", "f": "It peaked at number two in 1987, behind the Pet Shop Boys."},
+  {"c": "pop", "id": "q128", "prompt": "Presented Bake Off", "items": ["Mel Giedroyc", "Sandi Toksvig", "Noel Fielding", "Matt Lucas", "Holly Willoughby"], "odd": "Holly Willoughby", "f": "The others all presented the tent. Holly never got a soggy bottom."},
+  {"c": "music", "id": "q154", "prompt": "Played Live Aid at Wembley", "items": ["Queen", "U2", "David Bowie", "Elton John", "Madonna"], "odd": "Madonna", "f": "Madonna played the Philadelphia show on the same day."},
+  {"c": "music", "id": "q155", "prompt": "Beatles albums", "items": ["Revolver", "Abbey Road", "Rubber Soul", "Help!", "Sticky Fingers"], "odd": "Sticky Fingers", "f": "That's the Rolling Stones. Andy Warhol designed the cover, with a real zip."},
+  {"c": "music", "id": "q156", "prompt": "Woodwind instruments", "items": ["Flute", "Saxophone", "Clarinet", "Oboe", "French horn"], "odd": "French horn", "f": "The flute and sax count as woodwind despite being metal. It's how they make the sound that matters."},
+  {"c": "music", "id": "q157", "prompt": "Members of Queen", "items": ["Freddie Mercury", "Brian May", "Roger Taylor", "John Deacon", "Roger Daltrey"], "odd": "Roger Daltrey", "f": "Wrong Roger. Daltrey sang for The Who."},
+  {"c": "gk", "id": "q167", "prompt": "UK national parks", "items": ["Lake District", "Peak District", "Eryri (Snowdonia)", "Cairngorms", "Cotswolds"], "odd": "Cotswolds", "f": "The Cotswolds is a National Landscape, not a national park."},
+  {"c": "filmtv", "id": "q186", "prompt": "Played Doctor Who", "items": ["Peter Capaldi", "Matt Smith", "David Tennant", "Jodie Whittaker", "Benedict Cumberbatch"], "odd": "Benedict Cumberbatch", "f": "He was busy being Sherlock for the same producer, Steven Moffat."},
+  {"c": "filmtv", "id": "q187", "prompt": "Pixar films", "items": ["Up", "Cars", "Coco", "Inside Out", "Shrek"], "odd": "Shrek", "f": "Shrek is DreamWorks, and partly a dig at Disney."},
+  {"c": "filmtv", "id": "q188", "prompt": "Characters in the UK Office", "items": ["David Brent", "Tim Canterbury", "Gareth Keenan", "Dawn Tinsley", "Dwight Schrute"], "odd": "Dwight Schrute", "f": "Dwight is from the American remake. Gareth came first."},
+  {"c": "filmtv", "id": "q189", "prompt": "Won the Oscar for Best Actress", "items": ["Olivia Colman", "Helen Mirren", "Kate Winslet", "Judi Dench", "Keira Knightley"], "odd": "Keira Knightley", "f": "She's been nominated twice but hasn't won."},
+  {"c": "tech", "id": "q214", "prompt": "Named after a founder", "items": ["Cadbury", "Boots", "Ford", "Ferrari", "Nike"], "odd": "Nike", "f": "Nike is the Greek goddess of victory. The swoosh logo cost $35."},
+  {"c": "tech", "id": "q215", "prompt": "Owned by Volkswagen", "items": ["Audi", "Porsche", "Škoda", "SEAT", "Volvo"], "odd": "Volvo", "f": "Volvo is owned by China's Geely. VW also owns Bentley and Lamborghini."},
+  {"c": "tech", "id": "q216", "prompt": "Invented by women", "items": ["Dishwasher", "Windscreen wipers", "Monopoly", "Kevlar", "Telephone"], "odd": "Telephone", "f": "Monopoly began as Lizzie Magie's Landlord's Game, which was meant to show how unfair landlords were."},
+  {"c": "tech", "id": "q217", "prompt": "Currency called the dollar", "items": ["USA", "Australia", "Canada", "New Zealand", "South Africa"], "odd": "South Africa", "f": "South Africa uses the rand, named after a ridge full of gold."},
+  {"c": "litart", "id": "q250", "prompt": "Written by Jane Austen", "items": ["Emma", "Persuasion", "Sense and Sensibility", "Mansfield Park", "Jane Eyre"], "odd": "Jane Eyre", "f": "Charlotte Brontë wrote it, and she wasn't a fan of Austen."},
+  {"c": "litart", "id": "q252", "prompt": "Roald Dahl books", "items": ["The BFG", "Matilda", "The Twits", "Fantastic Mr Fox", "The Gruffalo"], "odd": "The Gruffalo", "f": "That's Julia Donaldson. The mouse made the Gruffalo up, and then he turned up."},
+  {"c": "litart", "id": "q253", "prompt": "Shakespeare tragedies", "items": ["Hamlet", "Macbeth", "King Lear", "Othello", "The Tempest"], "odd": "The Tempest", "f": "Nobody dies in The Tempest, which is a giveaway."},
+  {"c": "culture", "id": "q278", "prompt": "Knights of the Round Table", "items": ["Lancelot", "Gawain", "Galahad", "Percival", "Ivanhoe"], "odd": "Ivanhoe", "f": "Ivanhoe is Walter Scott's knight, from the time of Richard the Lionheart."},
+  {"c": "culture", "id": "q279", "prompt": "Norse gods", "items": ["Odin", "Thor", "Loki", "Freya", "Osiris"], "odd": "Osiris", "f": "Osiris is Egyptian, god of the dead."},
+  {"c": "culture", "id": "q280", "prompt": "Patron saints of UK and Irish nations", "items": ["St George", "St Andrew", "St David", "St Patrick", "St Christopher"], "odd": "St Christopher", "f": "Christopher looks after travellers. Patrick wasn't even Irish, he was probably from Britain."},
+  {"c": "culture", "id": "q281", "prompt": "From Scottish folklore", "items": ["Kelpie", "Selkie", "Nessie", "Brownie", "Leprechaun"], "odd": "Leprechaun", "f": "The leprechaun is Irish."},
+  {"c": "litart", "id": "q292", "prompt": "By Leonardo da Vinci", "items": ["Mona Lisa", "The Last Supper", "Lady with an Ermine", "Vitruvian Man", "The Birth of Venus"], "odd": "The Birth of Venus", "f": "That's Botticelli. Leonardo finished surprisingly few paintings."},
+  {"c": "histsci", "id": "q309", "prompt": "Elements named after places", "items": ["Polonium", "Americium", "Francium", "Germanium", "Helium"], "odd": "Helium", "f": "Named after the Sun, where it was spotted before anyone found it on Earth."},
+  {"c": "histsci", "id": "q310", "prompt": "Dinosaurs", "items": ["T. rex", "Stegosaurus", "Triceratops", "Velociraptor", "Pterodactyl"], "odd": "Pterodactyl", "f": "Pterosaurs were flying reptiles, not dinosaurs. Birds, on the other hand, are."},
+  {"c": "food", "id": "q334", "prompt": "Types of pasta", "items": ["Penne", "Fusilli", "Farfalle", "Vermicelli", "Panini"], "odd": "Panini", "f": "Farfalle means 'butterflies'. Vermicelli means 'little worms'."},
+  {"c": "food", "id": "q335", "prompt": "English cheeses", "items": ["Cheddar", "Stilton", "Red Leicester", "Wensleydale", "Caerphilly"], "odd": "Caerphilly", "f": "Caerphilly is Welsh."},
+  {"c": "food", "id": "q336", "prompt": "Botanically fruit", "items": ["Tomato", "Cucumber", "Pumpkin", "Aubergine", "Rhubarb"], "odd": "Rhubarb", "f": "Rhubarb is a vegetable. A US court ruled it a fruit in 1947 anyway, for tax reasons."},
+  {"c": "food", "id": "q337", "prompt": "Scottish dishes", "items": ["Haggis", "Cullen skink", "Cranachan", "Tablet", "Bara brith"], "odd": "Bara brith", "f": "Bara brith is Welsh: 'speckled bread'."},
+  {"c": "histsci", "id": "q352", "prompt": "Invented after the fax machine", "items": ["Telephone", "Light bulb", "Car", "Aeroplane", "Pencil"], "odd": "Pencil", "f": "The fax machine dates from 1843, before the telephone."},
+  {"c": "histsci", "id": "q353", "prompt": "Animals that have been to space", "items": ["Dogs", "Monkeys", "Fruit flies", "Tortoises", "Pandas"], "odd": "Pandas", "f": "Two Soviet tortoises flew round the Moon in 1968, before any human did."},
+  {"c": "sport", "id": "q369", "prompt": "Golf majors", "items": ["The Masters", "The Open", "US Open", "PGA Championship", "Ryder Cup"], "odd": "Ryder Cup", "f": "The Ryder Cup is a team match, Europe against the USA."},
+  {"c": "sport", "id": "q370", "prompt": "Dropped from the Olympics", "items": ["Tug of war", "Live pigeon shooting", "Cricket", "Croquet", "Table tennis"], "odd": "Table tennis", "f": "Tug of war was Olympic until 1920. Britain won it twice."},
+  {"c": "sport", "id": "q371", "prompt": "Rugby positions", "items": ["Hooker", "Prop", "Fly-half", "Scrum-half", "Silly mid-on"], "odd": "Silly mid-on", "f": "That's a cricket fielding position, and yes, it's really called that."},
+  {"c": "sport", "id": "q372", "prompt": "Won the European Cup or Champions League", "items": ["Liverpool", "Nottingham Forest", "Aston Villa", "Chelsea", "Arsenal"], "odd": "Arsenal", "f": "Nottingham Forest have won it twice. Arsenal are still waiting."},
+  {"c": "world", "id": "q397", "prompt": "More than one capital", "items": ["South Africa", "Bolivia", "Netherlands", "Malaysia", "Australia"], "odd": "Australia", "f": "Australia has just Canberra, built because Sydney and Melbourne couldn't agree."},
+  {"c": "world", "id": "q398", "prompt": "Part of the Kingdom of Denmark", "items": ["Greenland", "Faroe Islands", "Bornholm", "Zealand", "Iceland"], "odd": "Iceland", "f": "Iceland went independent in 1944, while Denmark was occupied in the war."},
+];
+const NB_FORGERY = [
+  {"c": "music", "id": "q012", "find": "The Beatles", "real": ["Came from Liverpool", "Played their last gig on a London rooftop"], "fake": "Ringo was the original drummer", "f": "Pete Best got there first. Ringo joined in 1962."},
+  {"c": "filmtv", "id": "q028", "find": "Only Fools and Horses", "real": ["Del Boy fell through a bar flap", "Set in Peckham"], "fake": "The Trotters drove a yellow Ford Escort", "f": "It was a three-wheeled Reliant Regal van."},
+  {"c": "culture", "id": "q035", "find": "The Vikings", "real": ["Reached North America around 1000 AD", "Thursday is named after their god Thor"], "fake": "They wore horned helmets", "f": "No Viking horned helmet has ever been found. The horns came from 19th-century opera costumes."},
+  {"c": "litart", "id": "q047", "find": "Roald Dahl", "real": ["Was a fighter pilot in WWII", "Wrote the screenplay for a James Bond film"], "fake": "Was born in Norway", "f": "He was born in Cardiff to Norwegian parents. The Bond film was You Only Live Twice."},
+  {"c": "histsci", "id": "q053", "find": "Isaac Newton", "real": ["Ran the Royal Mint", "Was an MP"], "fake": "Was knighted for his work on gravity", "f": "Queen Anne knighted him in 1705 while he was standing for Parliament. It was about politics, not physics."},
+  {"c": "sport", "id": "q063", "find": "The FA Cup", "real": ["The oldest national football competition in the world", "Wanderers won the first final in 1872"], "fake": "The original trophy is in the National Football Museum", "f": "The original was stolen from a Birmingham shop window in 1895 and never seen again. "},
+  {"c": "pop", "id": "q075", "find": "Monopoly", "real": ["Free Parking pays out nothing in the official rules", "Sets were used to smuggle escape maps to WWII prisoners"], "fake": "The thimble is still a playing piece", "f": "The thimble was voted out in 2017. A rubber duck, a penguin and a T-rex came in."},
+  {"c": "music", "id": "q077", "find": "Elvis Presley", "real": ["Never played a concert outside North America", "Had a twin brother"], "fake": "Wrote most of his own hits", "f": "He didn't write any of them. A few gave him a co-writing credit anyway, for business reasons."},
+  {"c": "world", "id": "q087", "find": "Australia", "real": ["Has the world's largest herd of wild camels", "Canberra is the capital"], "fake": "The Sydney Opera House came in on budget", "f": "It cost about 14 times the original budget and opened ten years late."},
+  {"c": "gk", "id": "q107", "find": "The Royal Mail", "real": ["Delivers to every UK address for the same price", "Post boxes carry the monarch's cipher"], "fake": "Britain's first pillar box was in London", "f": "It was in Jersey, in 1852. The novelist Anthony Trollope suggested it while working for the Post Office."},
+  {"c": "gk", "id": "q108", "find": "Big Ben", "real": ["The bell weighs over 13 tonnes", "A flock of starlings once slowed the clock down"], "fake": "It has the largest clock face in the world", "f": "Plenty of clock faces are bigger. The starlings sat on the minute hand in 1949 and made it five minutes late."},
+  {"c": "gk", "id": "q109", "find": "The London Underground", "real": ["The oldest underground railway in the world", "More than half of it runs above ground"], "fake": "It has more stations than any other metro", "f": "New York's subway has well over 400 stations. London has around 270."},
+  {"c": "gk", "id": "q111", "find": "The Union Flag", "real": ["Combines the crosses of St George, St Andrew and St Patrick", "Wales isn't on it"], "fake": "Calling it the Union Jack on land is officially wrong", "f": "That's a myth. Either name is correct, on land or at sea."},
+  {"c": "pop", "id": "q134", "find": "Strictly Come Dancing", "real": ["Based on the old show Come Dancing", "The winners get a glitterball trophy"], "fake": "It's filmed in Blackpool", "f": "It's filmed at Elstree. Blackpool usually gets one special week."},
+  {"c": "pop", "id": "q135", "find": "The Beano", "real": ["First published in 1938", "Dennis the Menace's dog is Gnasher"], "fake": "It's published in London", "f": "It's made by DC Thomson in Dundee."},
+  {"c": "pop", "id": "q136", "find": "Eurovision", "real": ["ABBA won with 'Waterloo'", "The UK has hosted on behalf of other countries"], "fake": "The UK has never come last", "f": "The UK came last in 2003 with nul points, and a few times since."},
+  {"c": "pop", "id": "q137", "find": "Coronation Street", "real": ["First aired in 1960", "Set in the made-up town of Weatherfield"], "fake": "The Rovers Return is a real pub you can drink in", "f": "It's a set. You can't get served there."},
+  {"c": "music", "id": "q158", "find": "Freddie Mercury", "real": ["Born in Zanzibar", "Designed the Queen logo himself"], "fake": "His real name was Farrokh Mercury", "f": "He was born Farrokh Bulsara."},
+  {"c": "music", "id": "q159", "find": "Glastonbury", "real": ["Held at Worthy Farm", "Takes a year off every so often to rest the land"], "fake": "It has always been held in June", "f": "The first one was in September 1970, the day after Jimi Hendrix died."},
+  {"c": "gk", "id": "q166", "find": "The Highway Code", "real": ["First published in 1931", "It cost one penny"], "fake": "It says flash your headlights to let someone go first", "f": "It says the opposite. Only flash your lights to let others know you're there."},
+  {"c": "filmtv", "id": "q190", "find": "Jaws", "real": ["The crew nicknamed the shark Bruce", "The mechanical shark kept breaking down"], "fake": "It was filmed in Australia", "f": "It was filmed off Martha's Vineyard, near Boston."},
+  {"c": "filmtv", "id": "q191", "find": "Star Wars (1977)", "real": ["Harrison Ford was a carpenter before it", "R2-D2 was operated by an actor inside"], "fake": "George Lucas expected it to be a huge hit", "f": "He was so sure it would flop that he went on holiday to Hawaii when it opened."},
+  {"c": "filmtv", "id": "q192", "find": "Mr Bean", "real": ["Rowan Atkinson has a master's in electrical engineering", "Mr Bean drives a Mini"], "fake": "The original TV series ran for over 50 episodes", "f": "There were only about 15. It just feels like more."},
+  {"c": "tech", "id": "q218", "find": "Lego", "real": ["The name comes from Danish for 'play well'", "It makes more tyres than any other company"], "fake": "Bricks from 1958 won't fit today's", "f": "They still click together perfectly."},
+  {"c": "tech", "id": "q219", "find": "Apple", "real": ["Its first logo showed Isaac Newton under a tree", "A third founder sold his share for $800"], "fake": "The bite in the logo is a tribute to Alan Turing", "f": "A nice story, but the designer says the bite just stops it looking like a cherry."},
+  {"c": "tech", "id": "q220", "find": "Coca-Cola", "real": ["First sold in an Atlanta pharmacy", "First marketed as a tonic"], "fake": "Coca-Cola gave Santa his red suit", "f": "Santa was already wearing red long before. Coca-Cola's 1930s ads just made it stick."},
+  {"c": "tech", "id": "q221", "find": "Amazon", "real": ["It started out only selling books", "Jeff Bezos began it in his garage"], "fake": "It made a profit in its first year", "f": "It took about seven years. It was nearly called Cadabra."},
+  {"c": "tech", "id": "q222", "find": "IKEA", "real": ["Founded by a 17-year-old", "The name comes from his initials, farm and village"], "fake": "The meatballs were on the menu from day one", "f": "They arrived in 1985, to stop hungry shoppers leaving."},
+  {"c": "music", "id": "q227", "find": "Elton John", "real": ["Born Reginald Dwight", "Has worked with Bernie Taupin since 1967"], "fake": "He writes his own lyrics", "f": "Taupin writes the words, Elton writes the music, usually in separate rooms."},
+  {"c": "filmtv", "id": "q232", "find": "Toy Story", "real": ["Woody was first written as a nasty character", "Buzz was named after Buzz Aldrin"], "fake": "Mr Potato Head was invented for the film", "f": "Mr Potato Head dates from 1952, and was the first toy ever advertised on TV."},
+  {"c": "litart", "id": "q254", "find": "Sherlock Holmes", "real": ["He never says 'Elementary, my dear Watson' in the books", "Conan Doyle killed him off, then brought him back"], "fake": "221B Baker Street was a real address at the time", "f": "Baker Street didn't go up to 221 when the stories were written."},
+  {"c": "litart", "id": "q255", "find": "Shakespeare", "real": ["Wrote around 37 plays", "He's the first recorded user of words like 'bedroom'"], "fake": "He's buried in Westminster Abbey", "f": "He's buried in Stratford, under a curse on anyone who moves his bones."},
+  {"c": "litart", "id": "q256", "find": "The Mona Lisa", "real": ["It was stolen in 1911", "She has no visible eyebrows"], "fake": "It's painted on canvas", "f": "It's painted on a panel of poplar wood."},
+  {"c": "litart", "id": "q257", "find": "Charles Dickens", "real": ["Worked in a boot-blacking factory as a boy", "Gave hugely popular public readings"], "fake": "He invented the Christmas card", "f": "That was Henry Cole, in 1843, the same year A Christmas Carol came out."},
+  {"c": "culture", "id": "q282", "find": "King Arthur", "real": ["Said to be buried at Glastonbury", "Got Excalibur from the Lady of the Lake"], "fake": "He's mentioned in records written in his own lifetime", "f": "Nothing from his supposed lifetime mentions him. He first turns up centuries later."},
+  {"c": "culture", "id": "q283", "find": "St Patrick", "real": ["Kidnapped by Irish raiders as a teenager", "Said to have used the shamrock to explain the Trinity"], "fake": "He drove the snakes out of Ireland", "f": "There were no snakes in Ireland to drive out."},
+  {"c": "culture", "id": "q284", "find": "Halloween", "real": ["Grew out of the Celtic festival of Samhain", "The first jack-o'-lanterns were turnips"], "fake": "Trick-or-treating started in America", "f": "Scottish and Irish children went 'guising' for treats long before America picked it up."},
+  {"c": "culture", "id": "q285", "find": "Robin Hood", "real": ["The earliest ballads put him in Yorkshire", "Maid Marian was added later"], "fake": "Historians have identified the real Robin Hood", "f": "Plenty of candidates, no winner. Nottingham and Yorkshire still argue over him."},
+  {"c": "histsci", "id": "q311", "find": "Apollo 11", "real": ["They left a plaque on the Moon", "The spacesuits were sewn by a bra company"], "fake": "The astronauts took out life insurance", "f": "They couldn't get it, so they signed envelopes for their families to sell if they didn't come back."},
+  {"c": "histsci", "id": "q312", "find": "Albert Einstein", "real": ["He was offered the presidency of Israel", "He won a Nobel Prize"], "fake": "He won it for relativity", "f": "It was for the photoelectric effect. Relativity was still too controversial."},
+  {"c": "histsci", "id": "q313", "find": "Napoleon", "real": ["He was once mobbed by rabbits on a hunt", "He sold Louisiana to the USA"], "fake": "He was unusually short", "f": "He was about average height. British cartoonists made him small."},
+  {"c": "histsci", "id": "q314", "find": "Charles Darwin", "real": ["He sailed on HMS Beagle", "He ate many of the animals he studied"], "fake": "He coined 'survival of the fittest'", "f": "That was Herbert Spencer. Darwin was busy eating armadillo."},
+  {"c": "food", "id": "q338", "find": "Tea in Britain", "real": ["We drink around 100 million cups a day", "It was once so pricey people kept it in locked caddies"], "fake": "Earl Grey is flavoured with lemon", "f": "It's bergamot, a kind of orange."},
+  {"c": "food", "id": "q339", "find": "Haggis", "real": ["Traditionally cooked in a sheep's stomach", "It's been banned from import into the US since 1971"], "fake": "The oldest known recipe is Scottish", "f": "The earliest known recipe is English, from around 1430."},
+  {"c": "food", "id": "q340", "find": "Chocolate", "real": ["The Aztecs used cocoa beans as money", "White chocolate contains no cocoa solids"], "fake": "Milk chocolate was invented in Belgium", "f": "It was Switzerland, in 1875."},
+  {"c": "food", "id": "q341", "find": "Fish and chips", "real": ["The first chippies opened in the 1860s", "Fried fish came over with Jewish immigrants"], "fake": "It was rationed in the Second World War", "f": "It was never rationed. It was thought too important for morale."},
+  {"c": "food", "id": "q342", "find": "The Cornish pasty", "real": ["It has protected status", "It must be crimped on the side"], "fake": "A proper one must contain carrot", "f": "Carrot is banned. Beef, potato, swede and onion only."},
+  {"c": "sport", "id": "q373", "find": "The Olympic rings", "real": ["Designed by Pierre de Coubertin", "The five colours plus the white background cover every nation's flag"], "fake": "Each colour stands for a particular continent", "f": "The rings stand for the continents, but no colour is tied to any one."},
+  {"c": "sport", "id": "q374", "find": "The Grand National", "real": ["It's run at Aintree", "Becher's Brook is named after a jockey who fell into it"], "fake": "No horse has ever won it three times", "f": "Red Rum did it in the 1970s."},
+  {"c": "sport", "id": "q375", "find": "Darts", "real": ["The highest three-dart checkout is 170", "The board's numbers are arranged to punish bad aim"], "fake": "The bullseye is worth 100", "f": "It's 50."},
+  {"c": "sport", "id": "q376", "find": "Wimbledon", "real": ["Players must wear almost all white", "A hawk patrols to scare off pigeons"], "fake": "Strawberries and cream were only added in the 1990s", "f": "They've been served since the very first Championships."},
+  {"c": "world", "id": "q401", "find": "Iceland", "real": ["It has no army", "It has no mosquitoes"], "fake": "It's mostly covered in ice", "f": "Only about a tenth is ice. Greenland is the icy one."},
+  {"c": "world", "id": "q402", "find": "Canada", "real": ["It has the longest coastline in the world", "Its national animal is the beaver"], "fake": "Its flag has always had a maple leaf", "f": "The maple leaf flag only arrived in 1965."},
+  {"c": "world", "id": "q403", "find": "Venice", "real": ["It's built on wooden piles", "There are no cars"], "fake": "It has more miles of canal than Birmingham", "f": "Birmingham has about 35 miles of canal. Venice has about 26."},
+  {"c": "world", "id": "q404", "find": "Japan", "real": ["A train company once apologised for leaving 20 seconds early", "Vending machines sell hot soup"], "fake": "Japan is smaller than the UK", "f": "It's about one and a half times the size."},
+];
+const NB_PAIR = [
+  {"c": "food", "id": "q013", "items": ["Jaffa Cakes", "Pringles", "Cheerios", "Twix", "Hula Hoops"], "pair": ["Jaffa Cakes", "Pringles"], "f": "Both went to court over what they really are. Jaffa Cakes won and are legally cakes. Pringles lost and are officially crisps."},
+  {"c": "litart", "id": "q014", "items": ["Sherlock Holmes", "Paddington", "Mr Darcy", "Harry Potter", "Willy Wonka"], "pair": ["Sherlock Holmes", "Paddington"], "f": "Both have famous London addresses: 221B Baker Street and 32 Windsor Gardens."},
+  {"c": "culture", "id": "q036", "items": ["Thursday", "Wednesday", "Saturday", "Sunday", "Monday"], "pair": ["Thursday", "Wednesday"], "f": "Both are named after Norse gods, Thor and Woden. Saturday is the Roman odd one out, named after Saturn."},
+  {"c": "tech", "id": "q041", "items": ["Amazon", "Nokia", "Apple", "Samsung", "Lego"], "pair": ["Amazon", "Nokia"], "f": "Both are named after rivers. Nokia started out as a paper mill on Finland's Nokianvirta river."},
+  {"c": "food", "id": "q058", "items": ["Banana", "Avocado", "Strawberry", "Raspberry", "Blackberry"], "pair": ["Banana", "Avocado"], "f": "To a botanist, bananas and avocados are berries. Strawberries, raspberries and blackberries aren't."},
+  {"c": "gk", "id": "q071", "items": ["Sandwich", "Cardigan", "Wellington boot", "Teddy bear", "Biro"], "pair": ["Sandwich", "Cardigan"], "f": "Both named after earls. Wellington was a duke, Teddy a US president and Biró the Hungarian who invented the pen."},
+  {"c": "culture", "id": "q084", "items": ["Zeus", "Odin", "Ra", "Jupiter", "Thor"], "pair": ["Zeus", "Jupiter"], "f": "Same god, two names. The Romans borrowed Zeus and called him Jupiter."},
+  {"c": "gk", "id": "q112", "items": ["Unicorn", "Dragon", "Lion", "Eagle", "Bear"], "pair": ["Unicorn", "Dragon"], "f": "Scotland's and Wales's national animals. Neither country let reality get in the way."},
+  {"c": "gk", "id": "q113", "items": ["Diamond", "Graphite", "Pearl", "Ruby", "Amber"], "pair": ["Diamond", "Graphite"], "f": "Both are pure carbon. The only difference is how the atoms are stacked."},
+  {"c": "gk", "id": "q114", "items": ["Kangaroo", "Emu", "Koala", "Kiwi", "Wombat"], "pair": ["Kangaroo", "Emu"], "f": "Both are on Australia's coat of arms, supposedly because neither can easily walk backwards."},
+  {"c": "gk", "id": "q115", "items": ["Copper", "Tin", "Gold", "Iron", "Silver"], "pair": ["Copper", "Tin"], "f": "Melt them together and you get bronze, which named a whole age."},
+  {"c": "pop", "id": "q130", "items": ["Kylie Minogue", "Jason Donovan", "Harry Styles", "Olly Murs", "Robbie Williams"], "pair": ["Kylie Minogue", "Jason Donovan"], "f": "Both were in Neighbours first. Scott and Charlene's wedding in 1987 drew millions of UK viewers."},
+  {"c": "pop", "id": "q131", "items": ["Barbie", "Ken", "Sindy", "Action Man", "Paddington"], "pair": ["Sindy", "Action Man"], "f": "Britain's answers to Barbie and G.I. Joe."},
+  {"c": "pop", "id": "q133", "items": ["Ceefax", "Teletext", "Bebo", "MySpace", "Friends Reunited"], "pair": ["Ceefax", "Teletext"], "f": "Both were text pages on your telly. Ceefax switched off for good in 2012."},
+  {"c": "music", "id": "q161", "items": ["Elton John", "Freddie Mercury", "Cliff Richard", "Engelbert Humperdinck", "Bono"], "pair": ["Cliff Richard", "Engelbert Humperdinck"], "f": "Both were born in India."},
+  {"c": "music", "id": "q162", "items": ["Pink Floyd", "Led Zeppelin", "Black Sabbath", "Queen", "Duran Duran"], "pair": ["Black Sabbath", "Duran Duran"], "f": "Both from Birmingham."},
+  {"c": "music", "id": "q163", "items": ["Abbey Road", "Penny Lane", "Strawberry Fields", "Carnaby Street", "Baker Street"], "pair": ["Penny Lane", "Strawberry Fields"], "f": "Both are real places in Liverpool from John and Paul's childhoods."},
+  {"c": "music", "id": "q164", "items": ["Adele", "Ed Sheeran", "Stormzy", "Lewis Capaldi", "Jessie J"], "pair": ["Adele", "Jessie J"], "f": "Both went to the BRIT School in Croydon."},
+  {"c": "music", "id": "q165", "items": ["Cello", "Violin", "Trumpet", "Piano", "Drum"], "pair": ["Piano", "Drum"], "f": "A piano counts as percussion: hammers hit the strings."},
+  {"c": "pop", "id": "q169", "items": ["Pikachu", "Sonic", "Mario", "Kirby", "Pac-Man"], "pair": ["Pikachu", "Pac-Man"], "f": "Both yellow. Pac-Man was supposedly inspired by a pizza with a slice missing."},
+  {"c": "pop", "id": "q170", "items": ["Barbie", "Oppenheimer", "Titanic", "Avatar", "Frozen"], "pair": ["Barbie", "Oppenheimer"], "f": "They opened on the same day in July 2023. The internet called it Barbenheimer."},
+  {"c": "filmtv", "id": "q194", "items": ["Gandalf", "Dumbledore", "Saruman", "Magneto", "Professor X"], "pair": ["Gandalf", "Magneto"], "f": "Both played by Ian McKellen."},
+  {"c": "filmtv", "id": "q195", "items": ["Mufasa", "Darth Vader", "Simba", "Scar", "Yoda"], "pair": ["Mufasa", "Darth Vader"], "f": "Both voiced by James Earl Jones."},
+  {"c": "filmtv", "id": "q196", "items": ["Hermione Granger", "Elizabeth Swann", "Elizabeth Bennet", "Katniss Everdeen", "Bella Swan"], "pair": ["Elizabeth Swann", "Elizabeth Bennet"], "f": "Both played by Keira Knightley, two years apart."},
+  {"c": "filmtv", "id": "q197", "items": ["Hugh Grant", "Colin Firth", "Ewan McGregor", "Jude Law", "Daniel Craig"], "pair": ["Hugh Grant", "Colin Firth"], "f": "Bridget Jones's two love interests."},
+  {"c": "filmtv", "id": "q198", "items": ["Hogwarts Express", "Polar Express", "Orient Express", "The Jacobite", "Flying Scotsman"], "pair": ["Hogwarts Express", "The Jacobite"], "f": "The Jacobite steam train in the Highlands played the Hogwarts Express, crossing the Glenfinnan Viaduct."},
+  {"c": "tech", "id": "q223", "items": ["Adidas", "Puma", "Nike", "Reebok", "Umbro"], "pair": ["Adidas", "Puma"], "f": "Founded by two feuding brothers in the same small German town."},
+  {"c": "tech", "id": "q224", "items": ["Rolls-Royce", "Mini", "Bentley", "Jaguar", "Aston Martin"], "pair": ["Rolls-Royce", "Mini"], "f": "Both owned by BMW."},
+  {"c": "tech", "id": "q225", "items": ["Tesco", "Aldi", "Lidl", "Sainsbury's", "Asda"], "pair": ["Aldi", "Lidl"], "f": "Both German. Aldi's founders, two brothers, later split it into two companies."},
+  {"c": "tech", "id": "q226", "items": ["Spotify", "Skype", "Minecraft", "Angry Birds", "Nokia"], "pair": ["Angry Birds", "Nokia"], "f": "Both Finnish."},
+  {"c": "litart", "id": "q258", "items": ["Dracula", "Frankenstein", "Treasure Island", "The Hobbit", "Strange Case of Dr Jekyll and Mr Hyde"], "pair": ["Treasure Island", "Strange Case of Dr Jekyll and Mr Hyde"], "f": "Both by Robert Louis Stevenson, from Edinburgh."},
+  {"c": "litart", "id": "q259", "items": ["Picasso", "Dalí", "Monet", "Van Gogh", "Rembrandt"], "pair": ["Picasso", "Dalí"], "f": "Both Spanish. Dalí once gave a lecture in a diving suit and nearly suffocated."},
+  {"c": "litart", "id": "q260", "items": ["George Orwell", "Mark Twain", "Jane Austen", "J.R.R. Tolkien", "Thomas Hardy"], "pair": ["George Orwell", "Mark Twain"], "f": "Both pen names, for Eric Blair and Samuel Clemens."},
+  {"c": "litart", "id": "q261", "items": ["Frankenstein", "Dracula", "The Hobbit", "Animal Farm", "Harry Potter"], "pair": ["Frankenstein", "Harry Potter"], "f": "Both written by women. J.K. Rowling used initials so boys wouldn't be put off."},
+  {"c": "culture", "id": "q286", "items": ["Christmas", "Easter", "Diwali", "Hanukkah", "Bonfire Night"], "pair": ["Diwali", "Hanukkah"], "f": "Both are festivals of light."},
+  {"c": "culture", "id": "q287", "items": ["Thor", "Hercules", "Samson", "Achilles", "Atlas"], "pair": ["Samson", "Achilles"], "f": "Both undone by one weak spot. One heel, one haircut."},
+  {"c": "culture", "id": "q288", "items": ["Excalibur", "Mjölnir", "Poseidon's trident", "The Golden Fleece", "The Holy Grail"], "pair": ["Excalibur", "The Holy Grail"], "f": "Both from the legends of King Arthur."},
+  {"c": "histsci", "id": "q315", "items": ["Mercury", "Venus", "Earth", "Mars", "Jupiter"], "pair": ["Mercury", "Venus"], "f": "The only planets with no moons at all."},
+  {"c": "histsci", "id": "q316", "items": ["Edison", "Tesla", "Bell", "Marconi", "Baird"], "pair": ["Bell", "Baird"], "f": "Both Scots. One gave us the telephone, the other the television."},
+  {"c": "histsci", "id": "q317", "items": ["Whale", "Shark", "Dolphin", "Seal", "Salmon"], "pair": ["Shark", "Salmon"], "f": "The only fish. The rest breathe air."},
+  {"c": "histsci", "id": "q318", "items": ["Hydrogen", "Helium", "Oxygen", "Iron", "Gold"], "pair": ["Hydrogen", "Helium"], "f": "Made in the Big Bang. Nearly everything else was cooked up later, inside stars."},
+  {"c": "histsci", "id": "q319", "items": ["Elizabeth I", "Victoria", "Mary I", "Anne", "Elizabeth II"], "pair": ["Elizabeth I", "Mary I"], "f": "Both Tudors, both daughters of Henry VIII, and half-sisters who didn't get on."},
+  {"c": "food", "id": "q343", "items": ["Cheddar", "Stilton", "Brie", "Roquefort", "Parmesan"], "pair": ["Stilton", "Roquefort"], "f": "Both blue. Roquefort is still aged in caves."},
+  {"c": "food", "id": "q344", "items": ["Ketchup", "Mayonnaise", "Brown sauce", "Salad cream", "Mustard"], "pair": ["Mayonnaise", "Salad cream"], "f": "Both made with eggs."},
+  {"c": "food", "id": "q345", "items": ["Apple", "Pear", "Banana", "Mango", "Pineapple"], "pair": ["Apple", "Pear"], "f": "Both in the rose family, along with strawberries."},
+  {"c": "sport", "id": "q377", "items": ["Muhammad Ali", "Cassius Clay", "Mike Tyson", "Lennox Lewis", "Frank Bruno"], "pair": ["Muhammad Ali", "Cassius Clay"], "f": "Same man. He changed his name in 1964."},
+  {"c": "sport", "id": "q378", "items": ["Wembley", "Twickenham", "Lord's", "Old Trafford", "Murrayfield"], "pair": ["Lord's", "Old Trafford"], "f": "Both host Test cricket. There's an Old Trafford cricket ground just down the road from the football one."},
+  {"c": "sport", "id": "q379", "items": ["Usain Bolt", "Mo Farah", "Jessica Ennis-Hill", "Paula Radcliffe", "Kelly Holmes"], "pair": ["Jessica Ennis-Hill", "Kelly Holmes"], "f": "Both made dames."},
+  {"c": "sport", "id": "q380", "items": ["The Ashes", "Calcutta Cup", "Ryder Cup", "Davis Cup", "Webb Ellis Cup"], "pair": ["Calcutta Cup", "Webb Ellis Cup"], "f": "Both rugby. The Calcutta Cup was made from melted-down silver rupees."},
+  {"c": "world", "id": "q406", "items": ["Wales", "Scotland", "Bhutan", "Malta", "China"], "pair": ["Wales", "Bhutan"], "f": "Both have a dragon on the flag."},
+  {"c": "world", "id": "q407", "items": ["Nepal", "Switzerland", "Vatican City", "Japan", "Canada"], "pair": ["Switzerland", "Vatican City"], "f": "The only two square national flags."},
+  {"c": "world", "id": "q408", "items": ["Sahara", "Antarctica", "Gobi", "The Arctic", "Kalahari"], "pair": ["Antarctica", "The Arctic"], "f": "Both polar deserts. Antarctica is the biggest desert in the world."},
+  {"c": "world", "id": "q409", "items": ["Lake Victoria", "Lake Superior", "Caspian Sea", "Loch Ness", "Dead Sea"], "pair": ["Caspian Sea", "Dead Sea"], "f": "Both salty. The Caspian is the biggest lake in the world."},
+];
+
+// Fakes for the new Strata questions: each replaces one real find (`has`) in one stack, taking its place in the order
+FAKES.push(
+  { p: "Biggest coin first", has: "10p", fake: "15p", why: "There's never been a 15p coin. The real one here is the 10p." },
+  { p: "Highest rank first", has: "Viscount", fake: "Vicelord", why: "There's no such rank as vicelord. The real one here is viscount." },
+  { p: "Furthest from the Sun first", has: "Uranus", fake: "Orpheon", why: "There's no planet called Orpheon. The real one here is Uranus." },
+  { p: "Most expensive Monopoly property first", has: "Park Lane", fake: "Savile Row", why: "Savile Row isn't on the UK Monopoly board. The real square here is Park Lane." },
+  { p: "Earliest in the year first", has: "St David's Day", fake: "St Albion's Day", why: "There's no St Albion's Day. The real one here is St David's Day, 1 March." },
+  { p: "Happened earliest first", has: "Battle of Waterloo", fake: "Battle of Wexmoor", why: "There was no Battle of Wexmoor. The real one here is Waterloo, in 1815." },
+  { p: "Strongest first", has: "Port", fake: "Grogwine", why: "There's no drink called grogwine. The real one here is port, at about 20%." },
+  { p: "Hottest first", has: "Scotch bonnet", fake: "Highland bonnet", why: "There's no Highland bonnet chilli. The real one here is the Scotch bonnet." },
+);
+
+// Topics: General Knowledge and Pop Culture come up every day; the other eight rounds are drawn by weight
+const NB_ALWAYS = ['gk', 'pop'];
+const NB_WEIGHTS = { music: 10, filmtv: 10, tech: 10, litart: 10, culture: 10, histsci: 10, sport: 10, world: 10, food: 5 };
+const NB_POOLS = { pct: NB_PCT, date: NB_DATE, pin: NB_PIN, strata: NB_STRATA, intrusive: NB_INTRUSIVE, forgery: NB_FORGERY, pair: NB_PAIR };
+
+// A day's ten topics, one per round (five survey, then five excavation), no topic more than twice
+function nbTopics(seedKey) {
+  const rng = seededRNG(hashDate('nbmix-' + seedKey));
+  const out = [], pool = Object.keys(NB_WEIGHTS);
+  while (out.length < 8) {
+    const open = pool.filter(c => out.filter(x => x === c).length < 2);
+    let r = rng() * open.reduce((t, c) => t + NB_WEIGHTS[c], 0);
+    for (const c of open) { r -= NB_WEIGHTS[c]; if (r <= 0) { out.push(c); break; } }
+  }
+  return shuffle([...NB_ALWAYS, ...out], rng);
+}
+// Each pool has a fixed play order; questions added later (new ids) are queued after the ones already there
+const nbOrderCache = {};
+function nbOrder(fmt, topic) {
+  const k = fmt + ':' + topic;
+  if (nbOrderCache[k]) return nbOrderCache[k];
+  const pool = NB_POOLS[fmt].filter(q => topic === '*' || q.c === topic);
+  const batches = [...new Set(pool.map(q => q.b || 1))].sort((a, b) => a - b), order = [];
+  batches.forEach(b => {
+    const items = pool.filter(q => (q.b || 1) === b);
+    order.push(...shuffle(items, seededRNG(hashDate('nb-' + k + ':' + b))));
+  });
+  return (nbOrderCache[k] = order);
+}
+// First unused question of this kind on this topic, else from any topic; once a kind is used up, replay it oldest first
+const nbWarned = new Set();
+function nbPick(fmt, topic, used, today, off) {
+  const free = q => !used.has(q.id) && !today.has(q.id);
+  if (off != null) { // practice: anything goes, from a random point
+    const o = nbOrder(fmt, '*');
+    for (let i = 0; i < o.length; i++) { const q = o[(off + i) % o.length]; if (!today.has(q.id)) return q; }
+  }
+  const q = nbOrder(fmt, topic).find(free) || nbOrder(fmt, '*').find(free);
+  if (q) return q;
+  if (!nbWarned.has(fmt)) { nbWarned.add(fmt); console.warn('Carbon Dated: the ' + fmt + ' bank has run out of new questions and is replaying'); }
+  const all = nbOrder(fmt, '*');
+  return all.find(x => !today.has(x.id)) || all[0];
+}
+// Which questions a day asks. `used` holds every id asked on earlier days; this day's ids are added to it.
+function nbDay(seedKey, used, off) {
+  const topics = nbTopics(seedKey), fmts = surveyFormats(seedKey), kinds = trenchKinds(seedKey);
+  const today = new Set(), take = q => { today.add(q.id); return q; };
+  const survey = fmts.map((f, i) => take(nbPick(f, topics[i], used, today, off)));
+  const exc = kinds.map((k, i) => take(nbPick(k, topics[5 + i], used, today, off)));
+  // About one dig in three hides an artefact under a find that never existed, always in rounds 1–3
+  const fr = seededRNG(hashDate(seedKey + '-forger'));
+  let forgedRound = -1;
+  if (fr() < 1 / 3) {
+    const early = [0, 1, 2].filter(r => kinds[r] === 'strata');
+    let eligible = early.filter(r => fakeFor(exc[r]));
+    if (!eligible.length && early.length) {
+      // None of today's early Strata trenches has a fake ready: swap in an unused one that does
+      const pool = nbOrder('strata', '*').filter(q => fakeFor(q) && !used.has(q.id) && !today.has(q.id));
+      if (pool.length) {
+        const at = early[Math.floor(fr() * early.length)];
+        today.delete(exc[at].id); exc[at] = take(pool[0]); eligible = [at];
+      }
+    }
+    if (eligible.length) forgedRound = eligible[Math.floor(fr() * eligible.length)];
+  }
+  today.forEach(id => used.add(id));
+  return { survey, exc, kinds, forgedRound, fr };
+}
+// Every question asked from the start of this bank up to (not including) the given day
+function nbUsedBefore(key) {
+  const used = new Set(), d = parseKey(NEW_BANK_START);
+  for (let guard = 0; localKey(d) < key && guard < 3650; guard++) { nbDay(localKey(d), used); d.setDate(d.getDate() + 1); }
+  return used;
+}
+// When each kind of question runs out. Run nbRunway() in the browser console.
+function nbRunway(maxDays = 365) {
+  const used = new Set(), d = parseKey(NEW_BANK_START), out = {};
+  for (let i = 0; i < maxDays; i++) {
+    const key = localKey(d), before = new Set(used);
+    nbDay(key, used);
+    Object.entries(NB_POOLS).forEach(([f, pool]) => {
+      if (!out[f] && pool.every(q => used.has(q.id))) out[f] = key;
+    });
+    d.setDate(d.getDate() + 1);
+  }
+  const rows = Object.keys(NB_POOLS).map(f => ({ kind: f, total: NB_POOLS[f].length, lastNewDay: out[f] || 'over a year away' }));
+  if (typeof console.table === 'function') console.table(rows);
+  return rows;
+}
+if (typeof window !== 'undefined') window.nbRunway = nbRunway;
+
+function buildPuzzleNew(seedKey) {
+  const rng = seededRNG(hashDate(seedKey));
+  const day = isPractice ? nbDay(seedKey, new Set(), Math.floor(rng() * 1000)) : nbDay(seedKey, nbUsedBefore(seedKey));
+  const { kinds, fr } = day;
+  forger = null;
+  stackQs = day.exc.map((q, i) => {
+    const k = kinds[i];
+    if (k === 'strata') {
+      let correct = [...q.items];
+      if (i === day.forgedRound) {
+        const fk = fakeFor(q);
+        correct = correct.map(it => it === fk.has ? fk.fake : it);
+        forger = { round: i, fake: fk.fake, real: fk.has, why: fk.why, prompt: q.prompt };
+      }
+      let shuffled = shuffle([...correct], rng);
+      if (shuffled.every((it, j) => it === correct[j])) shuffled = [...shuffled.slice(1), shuffled[0]];
+      return { kind: 'strata', prompt: q.prompt, correct, shuffled, items: correct, f: q.f, c: q.c };
+    }
+    if (k === 'intrusive') {
+      const items = shuffle(q.items, rng);
+      return { kind: 'intrusive', prompt: q.prompt, items, answer: [items.indexOf(q.odd)], f: q.f, c: q.c };
+    }
+    if (k === 'forgery') {
+      const items = shuffle([...q.real, q.fake], rng);
+      return { kind: 'forgery', prompt: q.find, items, answer: [items.indexOf(q.fake)], f: q.f, c: q.c };
+    }
+    const items = shuffle(q.items, rng);
+    return { kind: 'pair', prompt: 'Two of these share a hidden link', items, answer: q.pair.map(p => items.indexOf(p)).sort((a, b) => a - b), f: q.f, c: q.c };
+  });
+  if (forger) {
+    forger.decoys = stackQs.map((sq, i) => i === forger.round ? forger.fake
+      : sq.kind === 'forgery' ? sq.prompt : sq.items[Math.floor(fr() * sq.items.length)]);
+    const arts = ARTEFACTS[siteKey()];
+    forger.artefact = arts[Math.floor(fr() * arts.length)];
+  }
+  ratioQs = day.survey.map((q, i) => ({ ...q, fmt: surveyFormats(seedKey)[i] }));
+}
+
 let ratioQs = [], stackQs = [], puzzleTheme = null, isPractice = false, practiceSite = null;
 let forger = null; // today's hidden artefact, if there is one: { round, fake (the find that never existed), real, why, prompt, decoys, artefact }
 
@@ -2946,6 +3493,13 @@ function buildPuzzle(practiceKey, noForger) {
   practiceSite = practiceKey || null;
   puzzleTheme = null;
   const seedKey = isPractice ? 'practice-' + Date.now() : dateStr;
+  // From 8 Nov 2026 every dig uses the new question bank
+  if (isPractice || dateStr >= NEW_BANK_START) {
+    buildPuzzleNew(seedKey);
+    STORAGE_KEY = isPractice ? 'stackle3_practice' : 'stackle3_' + dateStr + digRev(dateStr);
+    applySitePalette();
+    return;
+  }
   const rng = seededRNG(hashDate(seedKey));
   const mix = dayMix(seedKey);
   const used = isPractice ? { s: {}, k: {} } : usageBefore(dayIndex);
@@ -3578,7 +4132,8 @@ const SEAL_SETS = {
 const CATEGORY_SEAL = {
   history:'egyptian', science:'greek', world:'runic', gk:'cuneiform',
   tech:'alchemical', art:'marks', music:'greek', sport:'runic',
-  film:'egyptian', culture:'cuneiform', nature:'alchemical', geography:'marks'
+  film:'egyptian', culture:'cuneiform', nature:'alchemical', geography:'marks',
+  pop:'marks', filmtv:'egyptian', litart:'marks', histsci:'egyptian', food:'alchemical'
 };
 function getSeal(category, index) {
   const key = CATEGORY_SEAL[category] || CATEGORY_SEAL[Object.keys(CATEGORY_SEAL)[Math.abs(index) % Object.keys(CATEGORY_SEAL).length]];
