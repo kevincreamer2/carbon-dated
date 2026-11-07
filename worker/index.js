@@ -29,7 +29,13 @@ async function ensureSchema(db) {
       date TEXT NOT NULL, device TEXT NOT NULL, total INTEGER NOT NULL, standing INTEGER NOT NULL,
       rounds TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (date, device))`),
     db.prepare(`CREATE INDEX IF NOT EXISTS scores_date ON scores (date)`),
+    // Running count of every dig ever played at each score (at most 1,001 rows), so the
+    // all-time comparison never has to read the whole scores table
+    db.prepare(`CREATE TABLE IF NOT EXISTS alltime (total INTEGER PRIMARY KEY, n INTEGER NOT NULL)`),
   ]);
+  // First run after this change: fill the running count from the digs already saved
+  const filled = await db.prepare(`SELECT 1 AS x FROM alltime LIMIT 1`).first();
+  if (!filled) await db.prepare(`INSERT OR IGNORE INTO alltime (total, n) SELECT total, COUNT(*) FROM scores GROUP BY total`).run();
   ready = true;
 }
 
@@ -50,9 +56,14 @@ async function postScore(req, env) {
     ok: r && (r.ok === 0 || r.ok === 1) ? r.ok : null,
   }));
   await ensureSchema(env.DB);
-  await env.DB.prepare(`INSERT OR IGNORE INTO scores (date, device, total, standing, rounds, created) VALUES (?, ?, ?, ?, ?, ?)`)
-    .bind(date, device, Math.round(total), standing ? 1 : 0, JSON.stringify(clean), Date.now()).run();
-  return getStats(req, env, date, Math.round(total));
+  const t = Math.round(total);
+  const ins = await env.DB.prepare(`INSERT OR IGNORE INTO scores (date, device, total, standing, rounds, created) VALUES (?, ?, ?, ?, ?, ?)`)
+    .bind(date, device, t, standing ? 1 : 0, JSON.stringify(clean), Date.now()).run();
+  // Count it in the all-time tally only if this device hadn't already sent today's dig
+  if (ins.meta && ins.meta.changes > 0) {
+    await env.DB.prepare(`INSERT INTO alltime (total, n) VALUES (?, 1) ON CONFLICT(total) DO UPDATE SET n = n + 1`).bind(t).run();
+  }
+  return getStats(req, env, date, t);
 }
 
 async function getStats(req, env, date, mine = null) {
@@ -84,14 +95,18 @@ async function getStats(req, env, date, mine = null) {
     };
   });
   // Every dig ever played, for while a single day is still quiet
-  const agg = await env.DB.prepare(`SELECT COUNT(*) AS n, SUM(standing) AS st,
-      SUM(CASE WHEN total < ?1 THEN 1 ELSE 0 END) AS below, SUM(CASE WHEN total > ?1 THEN 1 ELSE 0 END) AS above FROM scores`)
-    .bind(mine === null ? -1 : mine).first();
-  const { results: ab } = await env.DB.prepare(`SELECT MIN(total / ${BUCKET}, ${Math.ceil(1000 / BUCKET)}) AS b, COUNT(*) AS c FROM scores GROUP BY b`).all();
+  // Read from the small running tally rather than every score ever saved
+  const { results: tally } = await env.DB.prepare(`SELECT total, n FROM alltime`).all();
   const allBuckets = new Array(Math.ceil(1000 / BUCKET) + 1).fill(0);
-  ab.forEach(r => { allBuckets[r.b] = r.c; });
-  const all = { players: agg.n || 0, standing: agg.n ? Math.round((agg.st / agg.n) * 100) : null, buckets: allBuckets,
-    below: mine === null ? null : agg.below || 0, above: mine === null ? null : agg.above || 0 };
+  let allN = 0, below = 0, above = 0;
+  for (const r of tally) {
+    allN += r.n;
+    allBuckets[Math.min(allBuckets.length - 1, Math.floor(r.total / BUCKET))] += r.n;
+    if (mine !== null && r.total < mine) below += r.n;
+    if (mine !== null && r.total > mine) above += r.n;
+  }
+  const all = { players: allN, standing: null, buckets: allBuckets,
+    below: mine === null ? null : below, above: mine === null ? null : above };
   return json(req, { date, all, players, standing: players ? Math.round((standing / players) * 100) : null, bucket: BUCKET, buckets, totals: players <= 2000 ? totals : undefined, rounds },
     200, { 'Cache-Control': 'public, max-age=30' });
 }
