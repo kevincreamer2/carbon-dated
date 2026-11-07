@@ -4510,12 +4510,18 @@ function judgeSurvey(q, g) {
     detail: `You guessed ${g}%, answer was ${a}%` };
 }
 
+// Steep near the answer so precision still pays, then a long tail so a ballpark guess earns something:
+// 0 off = 100, 10 off = 70, 20 off = 55, 30 off = 40, 40 off = 25, 50 off = 10, 57+ off = 0
+function surveyScore(diff) {
+  const s = diff <= 10 ? 100 - diff * 3 : 85 - diff * 1.5;
+  return Math.max(0, Math.round(s));
+}
 function lockEstimate() {
   const q = ratioQs[state.round];
   const answer = q.a;
   const j = judgeSurvey(q, state.guess);
   const diff = j.diff;
-  const score = Math.max(0, Math.round(100 - diff * 3)); // 3 points per % off: 10 off = 70, 34+ off = 0
+  const score = surveyScore(diff);
   const emoji = diff <= 2 ? '🟩' : diff <= 7 ? '🟨' : diff <= 15 ? '🟧' : '🟥';
 
   state.scores.push({ phase: 'estimate', fmt: q.fmt || 'pct', q: q.q, c: q.c, guess: state.guess, answer, d: diff, gPos: j.gPos, aPos: j.aPos, gTxt: j.gTxt, aTxt: j.aTxt, offTxt: j.offTxt, score, emoji, detail: j.detail });
@@ -4785,12 +4791,8 @@ function lockPick() {
         const pos = document.createElement('div');
         pos.className = 'correct-pos'; pos.textContent = tag;
         el.appendChild(pos);
-      } else if (!isAns && !picked && isPair && !right) {
-        // Pair trench: wrong items crack then fall off screen
-        el.classList.remove('dim');
-        addItemCracks(el, 3);
-        setTimeout(() => el.classList.add('anim-crumble-fall'), 200);
       }
+      // Finds you didn't pick that weren't in the answer stay where they are, dimmed, so the whole set is visible
     });
   });
 
