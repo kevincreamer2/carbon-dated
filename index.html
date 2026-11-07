@@ -784,11 +784,11 @@ input[type="range"]::-moz-range-thumb {
   cursor: grab;
 }
 .stack-item .pos-num {
-  width: 24px; height: 24px; border-radius: 2px; display: flex;
-  align-items: center; justify-content: center; font-size: 0.75rem;
-  font-weight: 700; flex-shrink: 0; background: var(--ink);
-  color: var(--bg); font-family: var(--display); font-variant-numeric: tabular-nums;
-  position: relative; z-index: 1;
+  width: 28px; display: flex;
+  align-items: center; justify-content: center; font-size: 0.8rem;
+  font-weight: 700; flex-shrink: 0; background: none;
+  color: var(--gold-d); font-family: var(--display);
+  border-radius: 0; position: relative; z-index: 1;
 }
 .stack-item .item-text { flex: 1; min-width: 0; }
 .stack-item.dragging {
@@ -831,7 +831,7 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 3px 4px 0 rgba(26,36,32,0.05), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -3px 8px rgba(26,36,32,0.04);
   outline-color: var(--gold-d);
 }
-.stack-item.selected .pos-num { background: var(--gold); color: #fff; }
+.stack-item.selected .pos-num { background: none; color: var(--gold); }
 .stack-hint { font-size: 0.75rem; color: var(--fg-muted); text-align: center; margin-top: 4px; }
 .feedback-note { font-size: 0.82rem; font-weight: 600; text-align: center; }
 .feedback-note.won { color: var(--success); }
@@ -3692,7 +3692,8 @@ function renderStackItems() {
     div.className = 'stack-item' + (idx === selectedIdx ? ' selected' : '');
     div.dataset.idx = idx;
     const seal = getSeal(cat, idx);
-    div.innerHTML = `<div class="seal">${seal}</div><div class="pos-num">${idx + 1}</div><div class="item-text">${item}</div>`;
+    const _roman = ['I','II','III','IV','V'];
+    div.innerHTML = `<div class="seal">${seal}</div><div class="pos-num">${_roman[idx] || idx + 1}</div><div class="item-text">${item}</div>`;
     div.addEventListener('pointerdown', onPointerDown);
     container.appendChild(div);
   });
